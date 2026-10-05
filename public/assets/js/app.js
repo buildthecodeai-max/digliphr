@@ -384,9 +384,10 @@
                 if (!link) return;
                 var id = link.getAttribute('data-notif-id');
                 if (!id) return;
-                if (link.classList.contains('unread')) {
-                    link.classList.remove('unread');
-                    EMS.fetchJson('/api/notifications/' + id + '/read', { method: 'POST', body: {} }).catch(function () {});
+                var wasUnread = link.classList.contains('unread');
+                EMS.fetchJson('/api/notifications/' + id + '/read', { method: 'POST', body: {} }).catch(function () {});
+                link.remove();
+                if (wasUnread) {
                     _prevUnread = Math.max(0, _prevUnread - 1);
                     if (count) {
                         if (_prevUnread > 0) {
@@ -395,6 +396,9 @@
                             count.classList.add('d-none');
                         }
                     }
+                }
+                if (!list.querySelector('[data-notif-id]')) {
+                    list.innerHTML = '<div class="p-3 text-muted">You\'re all caught up.</div>';
                 }
             });
         }
@@ -405,9 +409,8 @@
                 e.stopPropagation();
                 EMS.fetchJson('/api/notifications/read-all', { method: 'POST', body: {} }).then(function () {
                     if (list) {
-                        list.querySelectorAll('.list-group-item.unread').forEach(function (el) {
-                            el.classList.remove('unread');
-                        });
+                        list.querySelectorAll('[data-notif-id]').forEach(function (el) { el.remove(); });
+                        list.innerHTML = '<div class="p-3 text-muted">You\'re all caught up.</div>';
                     }
                     _prevUnread = 0;
                     if (count) count.classList.add('d-none');
