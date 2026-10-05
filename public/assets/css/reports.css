@@ -332,6 +332,11 @@ html[data-theme="dark"] .subtabs-dropdown {
     background: var(--ems-card);
     box-shadow: 1px 0 0 var(--ems-border);
 }
+@media print {
+    .monthly-sheet-table thead th,
+    .monthly-sheet-table td:first-child,
+    .monthly-sheet-table th:first-child { position: static !important; box-shadow: none !important; z-index: auto !important; }
+}
 .sheet-pill {
     display: inline-grid;
     place-items: center;

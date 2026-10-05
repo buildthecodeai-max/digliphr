@@ -1192,12 +1192,19 @@ body.drawer-open { overflow: hidden; }
     .detail-drawer, .drawer-backdrop, .action-grid, .filter-chips-row,
     .page-header { display: none !important; }
 
-    /* Layout reset */
+    /* Layout reset — release all scroll/height clipping */
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    html, body { background: #fff !important; color: #000 !important; }
+    html, body { background: #fff !important; color: #000 !important;
+        overflow: visible !important; height: auto !important; }
+    .app-shell, .app-main, .app-content { overflow: visible !important; height: auto !important; }
     .app-shell { padding: 0; }
     .app-main { margin: 0 !important; }
     .app-content { padding: .5rem 1rem !important; }
+
+    /* Release scroll containers so all rows/columns render */
+    .report-table-shell { max-height: none !important; overflow: visible !important; height: auto !important; }
+    .table-responsive { overflow: visible !important; }
+    .report-subtabs-scroll { overflow: visible !important; }
 
     /* Injected print header */
     #printHeader { display: flex !important; align-items: center; justify-content: space-between;
@@ -1209,10 +1216,14 @@ body.drawer-open { overflow: hidden; }
     /* Cards & tables */
     .ems-card, .metric-card { break-inside: avoid; box-shadow: none !important;
         border: 1px solid #dee2e6 !important; }
-    .chart-panel { height: 220px !important; }
-    table { font-size: .78rem; }
+    .chart-panel { height: 220px !important; break-inside: avoid; }
+    table { font-size: .78rem; width: 100% !important; }
     thead { background: #f8f9fa !important; }
+    thead th { position: static !important; }
+    td:first-child, th:first-child { position: static !important; box-shadow: none !important; }
     .report-hero { color: #fff !important; }
+    tr { page-break-inside: avoid; }
+    .row { page-break-inside: avoid; }
 }
 
 /* ---------- Appearance: accent themes (darker options) ---------- */
