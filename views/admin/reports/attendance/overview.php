@@ -99,10 +99,10 @@ $periodLabel = (!empty($filters['from']) && !empty($filters['to']))
     </div>
     <div class="table-responsive">
         <table class="table table-sm mb-0 align-middle">
-            <thead><tr><th>Date</th><th>Employee</th><th>Dept</th><th>Shift</th><th>In</th><th>Out</th><th>Hours</th><th>OT</th><th>Status</th><th>Verification</th><th></th></tr></thead>
+            <thead><tr><th>Date</th><th>Employee</th><th>Dept</th><th>Shift</th><th>In</th><th>Out</th><th>Hours</th><th>OT</th><th>Status</th><th></th></tr></thead>
             <tbody>
             <?php if (empty($table['data'])): ?>
-                <tr><td colspan="11"><div class="empty-state mb-0 py-4">No attendance records were found for the selected period.</div></td></tr>
+                <tr><td colspan="10"><div class="empty-state mb-0 py-4">No attendance records were found for the selected period.</div></td></tr>
             <?php else: foreach ($table['data'] as $r): ?>
                 <tr>
                     <td><?= e(format_date($r['attendance_date'])) ?></td>
@@ -114,7 +114,6 @@ $periodLabel = (!empty($filters['from']) && !empty($filters['to']))
                     <td><?= e(format_minutes((int) $r['work_minutes'])) ?></td>
                     <td><?= e(format_minutes((int) $r['overtime_minutes'])) ?></td>
                     <td><?= status_badge($r['status']) ?></td>
-                    <td><?= status_badge($r['verification_status'] ?? 'pending') ?></td>
                     <td>
                         <button type="button" class="btn btn-sm btn-soft js-att-detail"
                             data-name="<?= e($r['employee_name']) ?>"

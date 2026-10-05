@@ -11,10 +11,10 @@ $pending = $missing['pending_corrections'] ?? [];
     </div>
     <div class="report-table-shell">
         <table class="table table-sm mb-0 align-middle">
-            <thead><tr><th>Employee</th><th>Department</th><th>Date</th><th>Check-In</th><th>Check-Out</th><th>Status</th><th>Verification</th><th>Issue</th></tr></thead>
+            <thead><tr><th>Employee</th><th>Department</th><th>Date</th><th>Check-In</th><th>Check-Out</th><th>Status</th><th>Issue</th></tr></thead>
             <tbody>
             <?php if (!$incomplete): ?>
-                <tr><td colspan="8"><div class="empty-state mb-0 py-4">No incomplete or flagged records.</div></td></tr>
+                <tr><td colspan="7"><div class="empty-state mb-0 py-4">No incomplete or flagged records.</div></td></tr>
             <?php else: foreach ($incomplete as $r): ?>
                 <tr>
                     <td><?= e($r['employee_name']) ?></td>
@@ -23,7 +23,6 @@ $pending = $missing['pending_corrections'] ?? [];
                     <td><?= e($r['check_in_at'] ? date(config('app.time_format', 'g:i A'), strtotime($r['check_in_at'])) : '—') ?></td>
                     <td><?= e($r['check_out_at'] ? date(config('app.time_format', 'g:i A'), strtotime($r['check_out_at'])) : '—') ?></td>
                     <td><?= status_badge($r['status']) ?></td>
-                    <td><?= status_badge($r['verification_status']) ?></td>
                     <td><span class="badge bg-warning"><?= e($r['issue_type']) ?></span></td>
                 </tr>
             <?php endforeach; endif; ?>
