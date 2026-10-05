@@ -680,6 +680,100 @@ h1, h2, h3, h4, h5, .page-header h1, .topbar-title {
     z-index: 20;
     box-shadow: var(--ems-shadow-sm);
 }
+
+/* Compact inline filter bar */
+.filter-bar.filter-bar-compact {
+    padding: .5rem .75rem;
+}
+.filter-bar-inner {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .25rem .5rem;
+}
+.filter-field {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+}
+.filter-field-dates {
+    gap: .3rem;
+}
+.filter-label {
+    font-size: .7rem;
+    font-weight: 600;
+    color: var(--ems-text-secondary);
+    white-space: nowrap;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+}
+.filter-label-mid {
+    font-size: .75rem;
+    color: var(--ems-text-secondary);
+}
+.filter-select {
+    min-width: 0;
+    width: auto;
+    max-width: 140px;
+    font-size: .78rem !important;
+    padding: .3rem .5rem !important;
+    height: 30px !important;
+    border-radius: 8px !important;
+}
+.filter-input-date {
+    width: 118px !important;
+    font-size: .78rem !important;
+    padding: .3rem .45rem !important;
+    height: 30px !important;
+    border-radius: 8px !important;
+}
+.filter-field-employee .filter-select {
+    max-width: 160px;
+}
+.filter-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--ems-border);
+    margin: 0 .15rem;
+    flex-shrink: 0;
+}
+.filter-actions {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    margin-left: auto;
+}
+.filter-compare-label {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    font-size: .78rem;
+    color: var(--ems-text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+}
+.filter-compare-label .form-check-input {
+    margin: 0;
+    width: 14px;
+    height: 14px;
+}
+.filter-apply-btn,
+.filter-reset-btn {
+    font-size: .78rem !important;
+    padding: .3rem .7rem !important;
+    height: 30px !important;
+    white-space: nowrap;
+}
+.filter-chips-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    margin-top: .4rem;
+    padding-top: .4rem;
+    border-top: 1px solid var(--ems-border);
+}
+
 .filter-chip {
     display: inline-flex;
     align-items: center;
