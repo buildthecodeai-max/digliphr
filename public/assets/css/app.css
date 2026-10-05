@@ -1186,13 +1186,33 @@ body.drawer-open { overflow: hidden; }
 }
 
 @media print {
-    .app-sidebar, .app-topbar, .workspace-tabs, .segmented-control, .report-tabs, .filter-bar,
-    .btn, .topbar-actions, #toastContainer, .detail-drawer, .drawer-backdrop, .action-grid { display: none !important; }
+    /* Hide all chrome */
+    .app-sidebar, .app-topbar, .workspace-tabs, .segmented-control, .report-tabs,
+    .filter-bar, .report-subtabs-scroll, .btn, .topbar-actions, #toastContainer,
+    .detail-drawer, .drawer-backdrop, .action-grid, .filter-chips-row,
+    .page-header { display: none !important; }
+
+    /* Layout reset */
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    html, body { background: #fff !important; color: #000 !important; }
     .app-shell { padding: 0; }
     .app-main { margin: 0 !important; }
-    .app-content { padding: 0 !important; }
-    .ems-card, .metric-card { break-inside: avoid; box-shadow: none !important; }
+    .app-content { padding: .5rem 1rem !important; }
+
+    /* Injected print header */
+    #printHeader { display: flex !important; align-items: center; justify-content: space-between;
+        padding: .6rem 0 .75rem; border-bottom: 2px solid #1e3a5f; margin-bottom: .9rem; }
+    #printHeader-logo { font-size: 1.1rem; font-weight: 800; color: #1e3a5f; letter-spacing: -.02em; }
+    #printHeader-meta { text-align: right; font-size: .72rem; color: #555; line-height: 1.5; }
+    #printHeader-title { font-size: .82rem; font-weight: 700; color: #1e3a5f; }
+
+    /* Cards & tables */
+    .ems-card, .metric-card { break-inside: avoid; box-shadow: none !important;
+        border: 1px solid #dee2e6 !important; }
     .chart-panel { height: 220px !important; }
+    table { font-size: .78rem; }
+    thead { background: #f8f9fa !important; }
+    .report-hero { color: #fff !important; }
 }
 
 /* ---------- Appearance: accent themes (darker options) ---------- */

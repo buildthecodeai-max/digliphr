@@ -36,6 +36,7 @@ if (!empty($filters['from']) && strtotime($filters['from']) !== false) {
         </div>
         <?php if (can('reports.export')): ?>
             <a class="btn btn-sm btn-soft" href="/admin/reports/export/<?= e($exportType) ?>?<?= e($qs) ?>&format=csv"><i data-lucide="download" class="me-1" style="width:14px;height:14px"></i>CSV</a>
+            <button type="button" class="btn btn-sm btn-soft" id="exportPdfBtn"><i data-lucide="file-text" class="me-1" style="width:14px;height:14px"></i>PDF</button>
             <button type="button" class="btn btn-sm btn-soft" onclick="window.print()"><i data-lucide="printer" class="me-1" style="width:14px;height:14px"></i>Print</button>
         <?php endif; ?>
     </div>
@@ -50,4 +51,25 @@ if (!empty($filters['from']) && strtotime($filters['from']) !== false) {
     <li class="nav-item"><a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/reports/employees') ? 'active' : '' ?>" href="/admin/reports/employees?<?= e($qs) ?>">Workforce</a></li>
     <li class="nav-item"><a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/reports/documents') ? 'active' : '' ?>" href="/admin/reports/documents?<?= e($qs) ?>">Documents</a></li>
 </ul>
+<!-- Hidden print-only header; shown via @media print -->
+<div id="printHeader" style="display:none">
+    <div>
+        <div id="printHeader-logo">DIGLIP HR</div>
+    </div>
+    <div id="printHeader-meta">
+        <div id="printHeader-title"><?= e($title ?? 'Report') ?></div>
+        <div><?= e($periodLabel ?: date('d M Y')) ?></div>
+        <div>Printed: <?= date('d M Y, g:i A') ?></div>
+    </div>
+</div>
+<script>
+(function () {
+    var btn = document.getElementById('exportPdfBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        document.title = <?= json_encode(($title ?? 'Report') . ($periodLabel ? ' · ' . $periodLabel : '')) ?>;
+        window.print();
+    });
+})();
+</script>
 <script>if (window.lucide) lucide.createIcons();</script>
