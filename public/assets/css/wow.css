@@ -1,0 +1,699 @@
+/*
+ * wow.css — Premium visual enhancement layer for EMS
+ * Loaded last so !important rules here win over existing layers.
+ * Covers: global navy color system, dashboard hero, metric cards,
+ * panels, reports launcher, report sub-sections, quick-link grid,
+ * and entrance animations.
+ */
+
+/* ================================================================
+   GLOBAL NAVY COLOR SYSTEM — force navy brand across all accents
+   ================================================================ */
+:root {
+    --wow-navy-900: #0f172a;
+    --wow-navy-800: #1e3a5f;
+    --wow-navy-700: #152a45;
+    --wow-navy-600: #164e63;
+    --wow-teal-500: #0891b2;
+    --wow-blue-400: #60a5fa;
+    --wow-navy-gradient: linear-gradient(135deg, #0f172a 0%, #1e3a5f 52%, #164e63 100%);
+}
+
+/* Ensure navy overrides any lingering indigo accent from localStorage */
+html:not([data-ems-accent="teal"]):not([data-ems-accent="forest"]) {
+    --color-primary: #1e3a5f !important;
+    --color-primary-hover: #152a45 !important;
+    --color-primary-soft: #e8f0f8 !important;
+    --ems-primary: #1e3a5f !important;
+    --ems-primary-dark: #152a45 !important;
+    --ems-primary-soft: #e8f0f8 !important;
+}
+html[data-theme="dark"]:not([data-ems-accent="teal"]):not([data-ems-accent="forest"]) {
+    --color-primary: #60a5fa !important;
+    --color-primary-hover: #93c5fd !important;
+    --color-primary-soft: rgba(96,165,250,.16) !important;
+    --ems-primary: #60a5fa !important;
+    --ems-primary-dark: #93c5fd !important;
+    --ems-primary-soft: rgba(96,165,250,.16) !important;
+}
+
+/* ================================================================
+   DASHBOARD — HERO BANNER
+   ================================================================ */
+.saas-dashboard-head.wow-hero {
+    position: relative !important;
+    padding: 36px 40px !important;
+    border-radius: 20px !important;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 52%, #164e63 100%) !important;
+    color: #fff;
+    overflow: hidden;
+    align-items: center !important;
+}
+/* Decorative glow orbs via pseudo-elements */
+.saas-dashboard-head.wow-hero::before {
+    content: '';
+    position: absolute;
+    top: -90px; right: -90px;
+    width: 380px; height: 380px;
+    background: radial-gradient(circle, rgba(37,99,235,.40) 0%, transparent 65%);
+    pointer-events: none;
+    border-radius: 50%;
+}
+.saas-dashboard-head.wow-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -70px; left: 32%;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(6,182,212,.22) 0%, transparent 65%);
+    pointer-events: none;
+    border-radius: 50%;
+}
+
+/* Text on dark background */
+.saas-dashboard-head.wow-hero h1 {
+    color: #fff !important;
+    font-size: 2.1rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -.04em !important;
+    position: relative;
+    z-index: 1;
+}
+.saas-dashboard-head.wow-hero p {
+    color: rgba(255,255,255,.7) !important;
+    position: relative;
+    z-index: 1;
+}
+.saas-dashboard-head.wow-hero .d-flex {
+    position: relative;
+    z-index: 1;
+}
+
+/* Hero button overrides */
+.saas-dashboard-head.wow-hero .btn-soft {
+    background: rgba(255,255,255,.12) !important;
+    border-color: rgba(255,255,255,.26) !important;
+    color: #e2e8f0 !important;
+}
+.saas-dashboard-head.wow-hero .btn-soft:hover {
+    background: rgba(255,255,255,.22) !important;
+    color: #fff !important;
+}
+.saas-dashboard-head.wow-hero .btn-primary {
+    background: rgba(255,255,255,.95) !important;
+    border-color: transparent !important;
+    color: #1e3a5f !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,.18) !important;
+}
+.saas-dashboard-head.wow-hero .btn-primary:hover {
+    background: #fff !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.22) !important;
+}
+
+/* ================================================================
+   METRIC CARDS — gradient top stripe + richer icons + hover lift
+   ================================================================ */
+.saas-metrics .saas-metric {
+    position: relative !important;
+    overflow: hidden !important;
+    transition: transform .22s ease, box-shadow .22s ease !important;
+}
+
+/* Gradient top accent stripe */
+.saas-metrics .saas-metric::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
+    z-index: 2;
+}
+.saas-metrics .saas-metric.is-teal::before   { background: linear-gradient(90deg, #0d9488, #34d399); }
+.saas-metrics .saas-metric.is-coral::before  { background: linear-gradient(90deg, #ef4444, #fb923c); }
+.saas-metrics .saas-metric.is-purple::before { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+
+/* Icon backgrounds — gradient + matching shadow */
+.saas-metrics .saas-metric .saas-metric-icon {
+    width: 54px !important;
+    height: 54px !important;
+    border-radius: 14px !important;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe) !important;
+    color: #2563eb !important;
+    box-shadow: 0 4px 14px rgba(37,99,235,.18) !important;
+}
+.saas-metrics .saas-metric.is-teal .saas-metric-icon {
+    background: linear-gradient(135deg, #f0fdfa, #ccfbf1) !important;
+    color: #0d9488 !important;
+    box-shadow: 0 4px 14px rgba(13,148,136,.18) !important;
+}
+.saas-metrics .saas-metric.is-coral .saas-metric-icon {
+    background: linear-gradient(135deg, #fef2f2, #fee2e2) !important;
+    color: #ef4444 !important;
+    box-shadow: 0 4px 14px rgba(239,68,68,.18) !important;
+}
+.saas-metrics .saas-metric.is-purple .saas-metric-icon {
+    background: linear-gradient(135deg, #f5f3ff, #ede9fe) !important;
+    color: #7c3aed !important;
+    box-shadow: 0 4px 14px rgba(124,58,237,.18) !important;
+}
+
+/* Bolder value number */
+.saas-metrics .saas-metric-value {
+    font-size: 2.1rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -.05em !important;
+}
+
+/* Hover lift */
+.saas-metrics .saas-metric:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 16px 40px rgba(0,0,0,.10) !important;
+}
+
+/* ================================================================
+   SAAS PANELS — rounder cards, taller charts, nicer rows
+   ================================================================ */
+.saas-panel {
+    border-radius: 16px !important;
+    overflow: hidden;
+    transition: box-shadow .22s ease;
+}
+.saas-panel:hover {
+    box-shadow: 0 10px 30px rgba(0,0,0,.07) !important;
+}
+.saas-panel-head {
+    padding: 18px 24px !important;
+}
+.saas-panel-head h2 {
+    font-size: .92rem !important;
+    letter-spacing: -.015em;
+}
+
+/* Taller attendance trend chart */
+.saas-chart { height: 290px !important; }
+
+/* Review pill buttons */
+.saas-review {
+    padding: 6px 18px !important;
+    border-radius: 20px !important;
+    font-size: .71rem !important;
+    font-weight: 700 !important;
+    background: var(--color-primary-soft, #eff6ff) !important;
+    border-color: transparent !important;
+    color: var(--color-primary, #2563eb) !important;
+    transition: background .15s ease, color .15s ease !important;
+}
+.saas-review:hover {
+    background: var(--color-primary, #2563eb) !important;
+    color: #fff !important;
+}
+
+/* Gradient avatar initials */
+.saas-avatar {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
+    color: #1d4ed8 !important;
+    font-weight: 800 !important;
+    border-radius: 10px !important;
+}
+
+/* ================================================================
+   ENTRANCE ANIMATIONS — staggered slide-up
+   ================================================================ */
+@keyframes wow-slide-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.saas-dashboard .wow-hero {
+    animation: wow-slide-up .5s cubic-bezier(.25,.46,.45,.94) both;
+}
+.saas-dashboard .saas-metrics .saas-metric:nth-child(1) { animation: wow-slide-up .42s .06s both; }
+.saas-dashboard .saas-metrics .saas-metric:nth-child(2) { animation: wow-slide-up .42s .12s both; }
+.saas-dashboard .saas-metrics .saas-metric:nth-child(3) { animation: wow-slide-up .42s .18s both; }
+.saas-dashboard .saas-metrics .saas-metric:nth-child(4) { animation: wow-slide-up .42s .24s both; }
+.saas-dashboard .saas-dashboard-column:first-child .saas-panel:nth-child(1) { animation: wow-slide-up .42s .3s both; }
+.saas-dashboard .saas-dashboard-column:first-child .saas-panel:nth-child(2) { animation: wow-slide-up .42s .37s both; }
+.saas-dashboard .saas-dashboard-column:first-child .saas-panel:nth-child(3) { animation: wow-slide-up .42s .43s both; }
+.saas-dashboard .saas-dashboard-column.is-secondary .saas-panel:nth-child(1) { animation: wow-slide-up .42s .28s both; }
+.saas-dashboard .saas-dashboard-column.is-secondary .saas-panel:nth-child(2) { animation: wow-slide-up .42s .35s both; }
+.saas-dashboard .saas-dashboard-column.is-secondary .saas-panel:nth-child(3) { animation: wow-slide-up .42s .42s both; }
+
+/* ================================================================
+   REPORTS — LAUNCHER HERO (dark gradient)
+   ================================================================ */
+.report-launcher {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #164e63 100%) !important;
+    border: none !important;
+    border-radius: 20px !important;
+    padding: 34px 40px !important;
+    color: #fff !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-shadow: 0 14px 44px rgba(15,23,42,.24) !important;
+}
+.report-launcher::before {
+    content: '';
+    position: absolute;
+    top: -90px; right: -80px;
+    width: 360px; height: 360px;
+    background: radial-gradient(circle, rgba(37,99,235,.38) 0%, transparent 64%);
+    pointer-events: none;
+    border-radius: 50%;
+}
+.report-launcher::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 40%;
+    width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(6,182,212,.22) 0%, transparent 64%);
+    pointer-events: none;
+    border-radius: 50%;
+}
+
+/* Kicker chip on dark bg */
+.report-launcher .report-kicker {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 4px 12px !important;
+    background: rgba(255,255,255,.11) !important;
+    border: 1px solid rgba(255,255,255,.2) !important;
+    border-radius: 20px !important;
+    color: #93c5fd !important;
+    font-size: .68rem !important;
+    font-weight: 700 !important;
+    letter-spacing: .06em !important;
+    text-transform: uppercase !important;
+    margin-bottom: 10px;
+}
+.report-launcher h2 {
+    color: #fff !important;
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -.03em !important;
+    position: relative;
+    z-index: 1;
+}
+.report-launcher p {
+    color: rgba(255,255,255,.68) !important;
+    font-size: .86rem !important;
+    position: relative;
+    z-index: 1;
+}
+.report-launcher > div,
+.report-launcher .report-launcher-actions { position: relative; z-index: 1; }
+
+/* Buttons inside the launcher */
+.report-launcher .btn-primary {
+    background: rgba(255,255,255,.95) !important;
+    border-color: transparent !important;
+    color: #1e3a5f !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,.18) !important;
+}
+.report-launcher .btn-primary:hover {
+    background: #fff !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.24) !important;
+}
+.report-launcher .btn-soft {
+    background: rgba(255,255,255,.10) !important;
+    border-color: rgba(255,255,255,.22) !important;
+    color: #e2e8f0 !important;
+}
+.report-launcher .btn-soft:hover {
+    background: rgba(255,255,255,.18) !important;
+    color: #fff !important;
+}
+
+/* ================================================================
+   REPORTS — QUICK LINKS as a CARD GRID
+   ================================================================ */
+.report-quick-links {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    flex-wrap: unset !important;
+}
+.report-quick-links a {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    padding: 24px 10px 18px !important;
+    background: var(--color-surface, #fff) !important;
+    border: 1px solid var(--color-border, #e2e8f0) !important;
+    border-radius: 16px !important;
+    color: var(--color-text-secondary, #64748b) !important;
+    font-size: .76rem !important;
+    font-weight: 650 !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    transition: all .22s ease !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04) !important;
+    line-height: 1.3 !important;
+}
+
+/* Per-link accent colours via custom properties */
+.report-quick-links a:nth-child(1) { --lc: #2563eb; --ls: #eff6ff; }
+.report-quick-links a:nth-child(2) { --lc: #0d9488; --ls: #f0fdfa; }
+.report-quick-links a:nth-child(3) { --lc: #7c3aed; --ls: #f5f3ff; }
+.report-quick-links a:nth-child(4) { --lc: #0284c7; --ls: #f0f9ff; }
+.report-quick-links a:nth-child(5) { --lc: #d97706; --ls: #fffbeb; }
+.report-quick-links a:nth-child(6) { --lc: #059669; --ls: #ecfdf5; }
+
+.report-quick-links a [data-lucide],
+.report-quick-links a svg {
+    width: 28px !important;
+    height: 28px !important;
+    color: var(--lc, var(--color-primary)) !important;
+    transition: transform .22s ease !important;
+}
+.report-quick-links a:hover {
+    border-color: var(--lc, var(--color-primary)) !important;
+    background: var(--ls, var(--color-primary-soft)) !important;
+    color: var(--lc, var(--color-primary)) !important;
+    transform: translateY(-4px) !important;
+    box-shadow: 0 10px 26px color-mix(in srgb, var(--lc, #2563eb) 18%, transparent) !important;
+}
+.report-quick-links a:hover [data-lucide],
+.report-quick-links a:hover svg {
+    transform: scale(1.12) !important;
+}
+
+/* ================================================================
+   REPORT METRIC TILES — subtle polish
+   ================================================================ */
+.report-metrics-row .metric-card {
+    border-radius: 14px !important;
+    transition: transform .2s ease, box-shadow .2s ease !important;
+}
+.report-metrics-row .metric-card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 22px rgba(0,0,0,.09) !important;
+}
+
+/* ================================================================
+   DARK MODE COMPATIBILITY
+   ================================================================ */
+html[data-theme="dark"] .saas-dashboard-head.wow-hero,
+html[data-theme="dark"] .report-launcher {
+    background: linear-gradient(135deg, #050c18 0%, #0c1b33 55%, #071520 100%) !important;
+    box-shadow: 0 14px 44px rgba(0,0,0,.5) !important;
+}
+
+html[data-theme="dark"] .saas-metrics .saas-metric .saas-metric-icon {
+    background: linear-gradient(135deg, rgba(37,99,235,.18), rgba(37,99,235,.32)) !important;
+}
+html[data-theme="dark"] .saas-metrics .saas-metric.is-teal .saas-metric-icon {
+    background: linear-gradient(135deg, rgba(13,148,136,.18), rgba(13,148,136,.32)) !important;
+}
+html[data-theme="dark"] .saas-metrics .saas-metric.is-coral .saas-metric-icon {
+    background: linear-gradient(135deg, rgba(239,68,68,.18), rgba(239,68,68,.32)) !important;
+}
+html[data-theme="dark"] .saas-metrics .saas-metric.is-purple .saas-metric-icon {
+    background: linear-gradient(135deg, rgba(124,58,237,.18), rgba(124,58,237,.32)) !important;
+}
+html[data-theme="dark"] .saas-avatar {
+    background: linear-gradient(135deg, rgba(37,99,235,.22), rgba(96,165,250,.32)) !important;
+    color: #93c5fd !important;
+}
+html[data-theme="dark"] .report-quick-links a {
+    background: var(--color-surface, #111827) !important;
+    border-color: var(--color-border, #263247) !important;
+    color: var(--color-text-secondary, #a8b3c5) !important;
+}
+html[data-theme="dark"] .report-quick-links a:hover {
+    background: color-mix(in srgb, var(--lc, #2563eb) 12%, var(--color-surface, #111827)) !important;
+    border-color: var(--lc, var(--color-primary)) !important;
+    color: var(--lc, var(--color-primary)) !important;
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 1199px) {
+    .report-quick-links { grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
+}
+@media (max-width: 991px) {
+    .saas-dashboard-head.wow-hero { padding: 28px 24px !important; }
+    .report-launcher            { flex-direction: column !important; padding: 26px 24px !important; }
+    .report-quick-links         { grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
+}
+@media (max-width: 767px) {
+    .saas-dashboard-head.wow-hero { padding: 24px 18px !important; }
+    .saas-dashboard-head.wow-hero h1 { font-size: 1.7rem !important; }
+}
+@media (max-width: 575px) {
+    .report-quick-links { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+    .saas-dashboard-head.wow-hero h1 { font-size: 1.4rem !important; }
+    .saas-metrics .saas-metric-value { font-size: 1.8rem !important; }
+}
+
+/* ================================================================
+   REPORT SUB-PAGES — Section hero banner
+   Each report page (attendance, leave, payroll …) gets a dark navy
+   hero via the existing .report-hero class in reports.css but we
+   override the gradient and ornament colours here so they match the
+   global navy palette.
+   ================================================================ */
+.report-hero {
+    background: linear-gradient(130deg, #0f172a 0%, #1e3a5f 55%, #164e63 100%) !important;
+    box-shadow: 0 14px 44px rgba(15,23,42,.22) !important;
+    border-radius: 16px !important;
+    padding: 28px 32px !important;
+}
+.report-hero::before {
+    background:
+        radial-gradient(480px 220px at 92% -15%, rgba(96,165,250,.28), transparent 60%),
+        radial-gradient(300px 180px at 100% 130%, rgba(6,182,212,.18), transparent 60%) !important;
+}
+.report-hero-ring {
+    background: conic-gradient(rgba(255,255,255,.90) calc(var(--pct,0) * 1%), rgba(255,255,255,.16) 0) !important;
+}
+.report-hero-ring::before {
+    background: #0f2342 !important;
+}
+
+/* ================================================================
+   REPORT SUB-PAGES — premium sub-tab bar
+   ================================================================ */
+.report-subtabs {
+    background: rgba(15,23,42,.06) !important;
+    border: 1px solid rgba(15,23,42,.09) !important;
+    padding: 5px !important;
+    border-radius: 12px !important;
+    gap: 3px !important;
+    margin-bottom: 20px !important;
+}
+.report-subtabs .nav-link {
+    border-radius: 9px !important;
+    font-size: .79rem !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    padding: .44rem .9rem !important;
+    gap: .4rem !important;
+    letter-spacing: -.01em !important;
+}
+.report-subtabs .nav-link:hover {
+    background: rgba(30,58,95,.08) !important;
+    color: #1e3a5f !important;
+}
+.report-subtabs .nav-link.active {
+    background: linear-gradient(135deg, #1e3a5f, #164e63) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 14px rgba(15,23,42,.22) !important;
+}
+.report-subtabs .nav-link svg,
+.report-subtabs .nav-link [data-lucide] { opacity: .8 !important; }
+.report-subtabs .nav-link.active svg,
+.report-subtabs .nav-link.active [data-lucide] { opacity: 1 !important; }
+
+/* Animate in each tab */
+.report-subtabs .nav-item {
+    animation: wow-slide-up .3s ease both;
+}
+.report-subtabs .nav-item:nth-child(1)  { animation-delay: .02s; }
+.report-subtabs .nav-item:nth-child(2)  { animation-delay: .05s; }
+.report-subtabs .nav-item:nth-child(3)  { animation-delay: .08s; }
+.report-subtabs .nav-item:nth-child(4)  { animation-delay: .11s; }
+.report-subtabs .nav-item:nth-child(5)  { animation-delay: .14s; }
+.report-subtabs .nav-item:nth-child(6)  { animation-delay: .17s; }
+.report-subtabs .nav-item:nth-child(7)  { animation-delay: .20s; }
+.report-subtabs .nav-item:nth-child(8)  { animation-delay: .23s; }
+.report-subtabs .nav-item:nth-child(9)  { animation-delay: .26s; }
+.report-subtabs .nav-item:nth-child(10) { animation-delay: .29s; }
+.report-subtabs .nav-item:nth-child(11) { animation-delay: .32s; }
+.report-subtabs .nav-item:nth-child(12) { animation-delay: .35s; }
+.report-subtabs .nav-item:nth-child(13) { animation-delay: .38s; }
+
+/* ================================================================
+   REPORT SUB-PAGES — polished metric / KPI tiles
+   ================================================================ */
+.report-metrics-row .metric-card,
+.metrics-row .metric-card {
+    border-radius: 14px !important;
+    border-left: 3px solid var(--color-primary, #1e3a5f) !important;
+    transition: transform .2s ease, box-shadow .2s ease !important;
+}
+.report-metrics-row .metric-card:hover,
+.metrics-row .metric-card:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 10px 28px rgba(15,23,42,.10) !important;
+}
+.metrics-row .metric-card .metric-icon {
+    background: linear-gradient(135deg, #e8f0f8, #c7d9f0) !important;
+    color: #1e3a5f !important;
+}
+
+/* ================================================================
+   REPORT SUB-PAGES — card headers with navy accent
+   ================================================================ */
+.report-card-title .rct-icon {
+    background: linear-gradient(135deg, #e8f0f8, #c7d9f0) !important;
+    color: #1e3a5f !important;
+}
+
+/* ================================================================
+   REPORT SUB-PAGES — table refinements
+   ================================================================ */
+.report-table-shell table thead th {
+    background: linear-gradient(180deg, #f8fafc, #f1f5f9) !important;
+    color: #1e3a5f !important;
+    border-bottom: 2px solid rgba(30,58,95,.12) !important;
+    font-size: .68rem !important;
+    letter-spacing: .05em !important;
+}
+.report-table-shell table tbody tr:hover > td {
+    background: rgba(30,58,95,.04) !important;
+}
+
+/* ================================================================
+   REPORT SUB-PAGES — percentage bar uses navy
+   ================================================================ */
+.pct-bar-fill {
+    background: linear-gradient(90deg, #1e3a5f, #2563eb) !important;
+}
+
+/* ================================================================
+   REPORT PAGE — attendance/leave/payroll page header
+   (The .page-header on sub-report pages gets a subtle navy underline)
+   ================================================================ */
+.app-content .page-header h1::after {
+    display: none;
+}
+
+/* ================================================================
+   REPORT SECTION — filter bar polish
+   ================================================================ */
+.filter-card, .report-filter-bar, .card.filter-card {
+    border-top: 3px solid var(--color-primary, #1e3a5f) !important;
+    border-radius: 12px !important;
+}
+
+/* ================================================================
+   REPORT KPI GROUP TITLES — navy accent line
+   ================================================================ */
+.kpi-group-title {
+    color: #1e3a5f !important;
+}
+.kpi-group-title::after {
+    background: linear-gradient(90deg, rgba(30,58,95,.3), transparent) !important;
+}
+
+/* ================================================================
+   REPORT QUICK-LINK ACTIVE STATE — current page indicator
+   ================================================================ */
+.report-quick-links a[aria-current="page"],
+.report-quick-links a.active {
+    border-color: var(--lc, #1e3a5f) !important;
+    background: var(--ls, #e8f0f8) !important;
+    color: var(--lc, #1e3a5f) !important;
+    box-shadow: 0 6px 20px rgba(30,58,95,.14) !important;
+}
+
+/* ================================================================
+   DARK MODE — report sub-page overrides
+   ================================================================ */
+html[data-theme="dark"] .report-subtabs {
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.08) !important;
+}
+html[data-theme="dark"] .report-subtabs .nav-link {
+    color: #94a3b8 !important;
+}
+html[data-theme="dark"] .report-subtabs .nav-link:hover {
+    background: rgba(96,165,250,.10) !important;
+    color: #93c5fd !important;
+}
+html[data-theme="dark"] .report-subtabs .nav-link.active {
+    background: linear-gradient(135deg, #1e3a5f, #0f2342) !important;
+    color: #93c5fd !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,.4) !important;
+}
+html[data-theme="dark"] .report-metrics-row .metric-card,
+html[data-theme="dark"] .metrics-row .metric-card {
+    border-left-color: #60a5fa !important;
+}
+html[data-theme="dark"] .metrics-row .metric-card .metric-icon {
+    background: linear-gradient(135deg, rgba(96,165,250,.15), rgba(96,165,250,.28)) !important;
+    color: #93c5fd !important;
+}
+html[data-theme="dark"] .report-card-title .rct-icon {
+    background: linear-gradient(135deg, rgba(96,165,250,.15), rgba(96,165,250,.28)) !important;
+    color: #93c5fd !important;
+}
+html[data-theme="dark"] .report-table-shell table thead th {
+    background: linear-gradient(180deg, #172033, #1a2540) !important;
+    color: #93c5fd !important;
+    border-bottom-color: rgba(96,165,250,.18) !important;
+}
+html[data-theme="dark"] .kpi-group-title {
+    color: #60a5fa !important;
+}
+html[data-theme="dark"] .kpi-group-title::after {
+    background: linear-gradient(90deg, rgba(96,165,250,.3), transparent) !important;
+}
+html[data-theme="dark"] .filter-card {
+    border-top-color: #60a5fa !important;
+}
+html[data-theme="dark"] .pct-bar-fill {
+    background: linear-gradient(90deg, #60a5fa, #93c5fd) !important;
+}
+
+/* ================================================================
+   REPORT PAGES — entrance animation for content sections
+   ================================================================ */
+.report-subtabs-scroll,
+.report-hero,
+.report-launcher,
+.report-quick-links,
+.report-metrics-row,
+.metrics-row {
+    animation: wow-slide-up .38s cubic-bezier(.25,.46,.45,.94) both;
+}
+.report-subtabs-scroll { animation-delay: .04s; }
+.report-hero         { animation-delay: .02s; }
+.report-launcher     { animation-delay: 0s; }
+.report-quick-links  { animation-delay: .08s; }
+.report-metrics-row,
+.metrics-row         { animation-delay: .12s; }
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .saas-dashboard .saas-metrics .saas-metric,
+    .saas-dashboard .saas-panel,
+    .saas-dashboard .wow-hero,
+    .report-quick-links a,
+    .saas-metrics .saas-metric,
+    .report-subtabs-scroll,
+    .report-hero,
+    .report-launcher,
+    .report-quick-links,
+    .report-metrics-row,
+    .metrics-row,
+    .report-subtabs .nav-item { animation: none !important; transition: none !important; }
+}

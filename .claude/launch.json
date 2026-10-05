@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ems",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["-S", "localhost:8001", "-t", "public"],
+      "port": 8001
+    }
+  ]
+}

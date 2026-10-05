@@ -1,0 +1,974 @@
+/* =========================================================
+   EMS Unified Design System — v1
+   Loaded AFTER app.css / workspace-nav.css / chat.css so it is the
+   single source of truth for buttons, tabs, inputs, cards, tables,
+   badges, modals, dropdowns, toasts, skeletons and transitions.
+
+   It layers on the existing --ems-* tokens, so the dark theme
+   (html[data-theme="dark"]) and the per-workspace accent variants
+   (data-ems-accent / data-accent) keep working untouched.
+   ========================================================= */
+
+:root {
+    /* Radii — aliased to the canonical --ems-radius* scale (app.css) so there is
+       a single source of truth. Cards land at 14px (compact/boxy, not 18-30px). */
+    --ds-radius: var(--ems-radius-md);
+    --ds-radius-sm: var(--ems-radius-xs);
+    --ds-radius-card: var(--ems-radius);
+    --ds-radius-pill: var(--ems-radius-pill);
+
+    /* Motion */
+    --ds-transition: 250ms ease;
+    --ds-ease-out: cubic-bezier(.22, 1, .36, 1);
+    --ds-hover-scale: 1.02;
+    --ds-active-scale: .98;
+    --ds-lift: -2px;
+
+    /* Spacing scale — 4 8 12 16 20 24 32 */
+    --ds-1: 4px;
+    --ds-2: 8px;
+    --ds-3: 12px;
+    --ds-4: 16px;
+    --ds-5: 20px;
+    --ds-6: 24px;
+    --ds-7: 32px;
+
+    /* Soft shadows — aliased to --ems-shadow* so the dark-theme override
+       (defined once, in app.css) stays in sync automatically. */
+    --ds-shadow-xs: var(--ems-shadow-xs);
+    --ds-shadow-sm: var(--ems-shadow-sm);
+    --ds-shadow-md: var(--ems-shadow-md);
+    --ds-shadow-lg: var(--ems-shadow-lg);
+    --ds-shadow-primary: 0 6px 18px color-mix(in srgb, var(--ems-primary) 28%, transparent);
+    --ds-shadow-primary-lg: 0 10px 28px color-mix(in srgb, var(--ems-primary) 38%, transparent);
+
+    /* Focus glow */
+    --ds-focus-ring: 0 0 0 3px color-mix(in srgb, var(--ems-primary) 26%, transparent);
+
+    /* Gradients derived from the live accent so themes stay consistent */
+    --ds-grad-primary: linear-gradient(135deg,
+        color-mix(in srgb, var(--ems-primary) 88%, #fff) 0%,
+        var(--ems-primary) 45%,
+        var(--ems-primary-dark) 100%);
+    --ds-grad-danger: linear-gradient(135deg,
+        color-mix(in srgb, var(--ems-danger) 88%, #fff) 0%,
+        var(--ems-danger) 45%,
+        color-mix(in srgb, var(--ems-danger) 78%, #000) 100%);
+    --ds-grad-success: linear-gradient(135deg,
+        color-mix(in srgb, var(--ems-success) 88%, #fff) 0%,
+        var(--ems-success) 45%,
+        color-mix(in srgb, var(--ems-success) 78%, #000) 100%);
+
+    /* Glass */
+    --ds-glass-bg: color-mix(in srgb, var(--ems-surface) 72%, transparent);
+    --ds-glass-border: color-mix(in srgb, var(--ems-border) 60%, transparent);
+}
+
+/* html[data-theme="dark"] shadow overrides removed — --ds-shadow* now alias
+   --ems-shadow*, whose dark-theme values are already set once in app.css. */
+
+/* =========================================================
+   Reduced motion — honoured globally
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+        scroll-behavior: auto !important;
+    }
+    .ds-ripple { display: none !important; }
+}
+
+/* =========================================================
+   BUTTONS — one system, every legacy variant folds into it
+   ========================================================= */
+
+/* Base shared by every button in the app (Bootstrap's .btn-close excluded).
+   IMPORTANT: this rule only CONSUMES --ds-btn-* (via var(…, fallback)) and
+   never declares them. .btn:not(.btn-close) has higher specificity than a
+   single variant class like .btn-primary (the :not() argument counts toward
+   specificity), so if this rule also *set* --ds-btn-bg as a "default", that
+   declaration would beat .btn-primary's and every variant would silently
+   render as the base style. Defaults live only in the var() fallback. */
+.btn:not(.btn-close) {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ds-2);
+    border-radius: var(--ds-radius) !important;
+    border: 1px solid var(--ds-btn-border, var(--ems-border)) !important;
+    background: var(--ds-btn-bg, var(--ems-surface));
+    background-size: 180% 180%;
+    background-position: 0% 50%;
+    color: var(--ds-btn-fg, var(--ems-text));
+    font-weight: 600;
+    letter-spacing: -.01em;
+    line-height: 1.2;
+    box-shadow: var(--ds-btn-shadow, var(--ds-shadow-xs));
+    cursor: pointer;
+    will-change: transform;
+    transition:
+        transform var(--ds-transition),
+        box-shadow var(--ds-transition),
+        background-position var(--ds-transition),
+        background-color var(--ds-transition),
+        border-color var(--ds-transition),
+        color var(--ds-transition),
+        opacity var(--ds-transition) !important;
+}
+
+/* Hover — lift 2px, scale, shadow increase, gradient movement */
+.btn:not(.btn-close):hover:not(:disabled):not(.disabled):not([aria-disabled="true"]) {
+    transform: translateY(var(--ds-lift)) scale(var(--ds-hover-scale));
+    box-shadow: var(--ds-btn-shadow-hover, var(--ds-shadow-md));
+    background-position: 100% 50%;
+}
+
+/* Click — press effect */
+.btn:not(.btn-close):active:not(:disabled):not(.disabled) {
+    transform: translateY(0) scale(var(--ds-active-scale));
+    transition-duration: 90ms !important;
+}
+
+/* Focus — glow */
+.btn:not(.btn-close):focus-visible {
+    outline: none;
+    box-shadow: var(--ds-btn-shadow-hover, var(--ds-shadow-md)), var(--ds-focus-ring);
+}
+
+/* Disabled — reduced opacity */
+.btn:not(.btn-close):disabled,
+.btn:not(.btn-close).disabled,
+.btn:not(.btn-close)[aria-disabled="true"] {
+    opacity: .55;
+    transform: none !important;
+    box-shadow: none;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.btn:not(.btn-close) svg,
+.btn:not(.btn-close) [data-lucide],
+.btn:not(.btn-close) i {
+    flex: none;
+    vertical-align: middle;
+}
+
+/* ---------- Variant: PRIMARY (gradient) ---------- */
+.btn-primary,
+.btn-dark,
+.btn-check-in {
+    --ds-btn-bg: var(--ds-grad-primary);
+    --ds-btn-fg: #fff;
+    --ds-btn-border: transparent;
+    --ds-btn-shadow: var(--ds-shadow-primary);
+    --ds-btn-shadow-hover: var(--ds-shadow-primary-lg);
+    color: #fff !important;
+}
+
+/* ---------- Variant: SECONDARY / SUBTLE ----------
+   Every legacy "quiet" variant resolves to one look. */
+.btn-soft,
+.btn-secondary,
+.btn-light,
+.btn-outline-secondary,
+.btn-outline-primary {
+    --ds-btn-bg: var(--ems-surface);
+    --ds-btn-fg: var(--ems-text);
+    --ds-btn-border: var(--ems-border);
+    --ds-btn-shadow: var(--ds-shadow-xs);
+    --ds-btn-shadow-hover: var(--ds-shadow-sm);
+    background-image: none;
+}
+.btn-soft:hover,
+.btn-secondary:hover,
+.btn-light:hover,
+.btn-outline-secondary:hover,
+.btn-outline-primary:hover {
+    --ds-btn-bg: color-mix(in srgb, var(--ems-primary) 8%, var(--ems-surface));
+    --ds-btn-fg: var(--ems-primary);
+    --ds-btn-border: color-mix(in srgb, var(--ems-primary) 30%, transparent);
+    color: var(--ems-primary) !important;
+}
+
+/* ---------- Variant: GHOST ---------- */
+.btn-ghost,
+.btn-link {
+    --ds-btn-bg: transparent;
+    --ds-btn-fg: var(--ems-text-secondary);
+    --ds-btn-border: transparent;
+    --ds-btn-shadow: none;
+    --ds-btn-shadow-hover: none;
+    background-image: none;
+    text-decoration: none !important;
+}
+.btn-ghost:hover,
+.btn-link:hover {
+    --ds-btn-bg: var(--ems-bg-section);
+    --ds-btn-fg: var(--ems-primary);
+}
+
+/* ---------- Variant: DANGER ---------- */
+.btn-danger {
+    --ds-btn-bg: var(--ds-grad-danger);
+    --ds-btn-fg: #fff;
+    --ds-btn-border: transparent;
+    --ds-btn-shadow: 0 6px 18px color-mix(in srgb, var(--ems-danger) 28%, transparent);
+    --ds-btn-shadow-hover: 0 10px 28px color-mix(in srgb, var(--ems-danger) 38%, transparent);
+    color: #fff !important;
+}
+.btn-outline-danger {
+    --ds-btn-bg: transparent;
+    --ds-btn-fg: var(--ems-danger);
+    --ds-btn-border: color-mix(in srgb, var(--ems-danger) 40%, transparent);
+    background-image: none;
+    color: var(--ems-danger) !important;
+}
+.btn-outline-danger:hover {
+    --ds-btn-bg: var(--ems-danger-soft);
+    --ds-btn-border: var(--ems-danger);
+}
+
+/* Danger — animated border on hover */
+.btn-danger:hover::after,
+.btn-outline-danger:hover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1.5px solid color-mix(in srgb, var(--ems-danger) 70%, transparent);
+    animation: ds-danger-pulse 1.4s var(--ds-ease-out) infinite;
+    pointer-events: none;
+    z-index: 2;
+}
+@keyframes ds-danger-pulse {
+    0%   { opacity: .9; transform: scale(1); }
+    70%  { opacity: 0;  transform: scale(1.06); }
+    100% { opacity: 0;  transform: scale(1.06); }
+}
+
+/* ---------- Variant: SUCCESS / WARNING ---------- */
+.btn-success,
+.btn-check-out {
+    --ds-btn-bg: var(--ds-grad-success);
+    --ds-btn-fg: #fff;
+    --ds-btn-border: transparent;
+    --ds-btn-shadow: 0 6px 18px color-mix(in srgb, var(--ems-success) 28%, transparent);
+    --ds-btn-shadow-hover: 0 10px 28px color-mix(in srgb, var(--ems-success) 38%, transparent);
+    color: #fff !important;
+}
+.btn-warning,
+.btn-outline-warning,
+.btn-outline-success {
+    --ds-btn-bg: var(--ems-surface);
+    --ds-btn-border: var(--ems-border);
+    background-image: none;
+}
+.btn-warning { --ds-btn-fg: var(--ems-warning); }
+.btn-outline-warning { --ds-btn-fg: var(--ems-warning); }
+.btn-outline-success { --ds-btn-fg: var(--ems-success); }
+
+/* ---------- Sizes ---------- */
+.btn-sm:not(.btn-close) {
+    border-radius: var(--ds-radius-sm) !important;
+    padding: .38rem .72rem;
+    font-size: .8rem;
+}
+.btn-lg:not(.btn-close) {
+    border-radius: var(--ds-radius) !important;
+    padding: .72rem 1.3rem;
+    font-size: .95rem;
+}
+
+/* ---------- Ripple ---------- */
+.ds-ripple {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    background: currentColor;
+    opacity: .28;
+    pointer-events: none;
+    z-index: 1;
+    animation: ds-ripple-out 560ms var(--ds-ease-out) forwards;
+}
+@keyframes ds-ripple-out {
+    to { transform: scale(2.6); opacity: 0; }
+}
+
+/* ---------- Loading state ---------- */
+.btn[data-ds-state="loading"] {
+    color: transparent !important;
+    pointer-events: none;
+}
+.btn[data-ds-state="loading"] > * { opacity: 0; }
+.btn[data-ds-state="loading"]::before {
+    content: "";
+    position: absolute;
+    width: 1em;
+    height: 1em;
+    top: 50%;
+    left: 50%;
+    margin: -.5em 0 0 -.5em;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+    border-top-color: var(--ds-btn-fg, #fff);
+    animation: ds-spin .6s linear infinite;
+    z-index: 3;
+}
+@keyframes ds-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Success state (animated check) ---------- */
+.btn[data-ds-state="success"] {
+    color: transparent !important;
+    --ds-btn-bg: var(--ds-grad-success);
+    --ds-btn-border: transparent;
+    pointer-events: none;
+}
+.btn[data-ds-state="success"] > * { opacity: 0; }
+.btn[data-ds-state="success"]::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: .34em;
+    height: .66em;
+    margin: -.38em 0 0 -.17em;
+    border: solid #fff;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg) scale(0);
+    transform-origin: center;
+    animation: ds-check-in .34s var(--ds-ease-out) forwards;
+    z-index: 3;
+}
+@keyframes ds-check-in {
+    0%   { transform: rotate(45deg) scale(0); opacity: 0; }
+    60%  { transform: rotate(45deg) scale(1.25); opacity: 1; }
+    100% { transform: rotate(45deg) scale(1); opacity: 1; }
+}
+
+/* ---------- Error state ---------- */
+.btn[data-ds-state="error"] {
+    --ds-btn-bg: var(--ds-grad-danger);
+    --ds-btn-border: transparent;
+    color: #fff !important;
+    animation: ds-shake .4s var(--ds-ease-out);
+}
+@keyframes ds-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+/* ---------- Icon button (circular) ---------- */
+.action-btn,
+.btn-icon {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--ds-radius-pill) !important;
+    border: 1px solid var(--ems-border);
+    background: var(--ems-surface);
+    color: var(--ems-text-secondary);
+    box-shadow: var(--ds-shadow-xs);
+    will-change: transform;
+    transition:
+        transform var(--ds-transition),
+        box-shadow var(--ds-transition),
+        background var(--ds-transition),
+        color var(--ds-transition),
+        border-color var(--ds-transition);
+}
+.action-btn:hover,
+.btn-icon:hover {
+    transform: translateY(var(--ds-lift)) scale(var(--ds-hover-scale));
+    box-shadow: var(--ds-shadow-sm);
+    background: color-mix(in srgb, var(--ems-primary) 9%, var(--ems-surface));
+    color: var(--ems-primary);
+    border-color: color-mix(in srgb, var(--ems-primary) 28%, transparent);
+}
+.action-btn:active,
+.btn-icon:active { transform: scale(var(--ds-active-scale)); }
+.action-btn:focus-visible,
+.btn-icon:focus-visible { outline: none; box-shadow: var(--ds-focus-ring); }
+
+/* ---------- Floating action button ---------- */
+.floating-chat-fab,
+.quick-create-fab,
+.ds-fab {
+    border-radius: var(--ds-radius-pill) !important;
+    box-shadow: var(--ds-shadow-primary) !important;
+    transition:
+        transform var(--ds-transition),
+        box-shadow var(--ds-transition) !important;
+    will-change: transform;
+}
+.floating-chat-fab:hover,
+.quick-create-fab:hover,
+.ds-fab:hover {
+    transform: translateY(var(--ds-lift)) scale(1.06);
+    box-shadow: var(--ds-shadow-primary-lg) !important;
+}
+.floating-chat-fab:active,
+.quick-create-fab:active,
+.ds-fab:active { transform: scale(var(--ds-active-scale)); }
+
+/* =========================================================
+   TABS — one system with a sliding indicator
+   ========================================================= */
+/* .workspace-tabs is intentionally excluded from `position: relative` here.
+   It's `position: sticky` in workspace-nav.css, with a `top` offset used only
+   for its stuck-scroll position. Overriding position to `relative` turns that
+   same `top` into a real layout offset instead, shoving the whole tab bar
+   down into the content below it — exactly the overlap bug this comment is
+   here to prevent regressing. .report-tabs/.nav-pills have no positioned
+   ancestor of their own, so they still need `relative` as the anchor for the
+   injected .ds-tab-indicator. */
+.report-tabs,
+.nav-pills {
+    position: relative;
+}
+.workspace-tabs,
+.report-tabs,
+.nav-pills {
+    border-radius: var(--ds-radius) !important;
+}
+
+.workspace-tab,
+.report-tabs .nav-link,
+.nav-pills .nav-link {
+    position: relative;
+    z-index: 1;
+    border-radius: var(--ds-radius-sm) !important;
+    border: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-2);
+    padding: .5rem .85rem;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--ems-text-secondary);
+    background: transparent !important;
+    transition:
+        color var(--ds-transition),
+        background-color var(--ds-transition),
+        transform var(--ds-transition) !important;
+}
+
+/* Hover background */
+.workspace-tab:hover,
+.report-tabs .nav-link:hover,
+.nav-pills .nav-link:hover {
+    color: var(--ems-text-heading);
+    background: var(--ems-bg-section) !important;
+}
+
+/* Active — accent text + the sliding .ds-tab-indicator underline below.
+   Deliberately no background pill/tint here (spec: "no oversized tab
+   backgrounds") — .workspace-tab keeps its own subtle active background
+   since that's a different, sidebar-owned tab system. */
+.report-tabs .nav-link.active,
+.nav-pills .nav-link.active {
+    color: var(--ws-accent, var(--ems-primary)) !important;
+    background: transparent !important;
+    font-weight: 700;
+}
+.workspace-tab.is-active {
+    color: var(--ws-accent, var(--ems-primary)) !important;
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--ws-accent, var(--ems-primary)) 16%, transparent),
+        color-mix(in srgb, var(--ws-accent, var(--ems-primary)) 8%, transparent)) !important;
+}
+
+.workspace-tab:focus-visible,
+.report-tabs .nav-link:focus-visible,
+.nav-pills .nav-link:focus-visible {
+    outline: none;
+    box-shadow: var(--ds-focus-ring);
+}
+
+/* Sliding indicator for .report-tabs / .nav-pills (GPU transform).
+   NOTE: .workspace-tabs already has its own working indicator driven by
+   workspace-nav.js (left/width based, see workspace-nav.css) — it is
+   intentionally left alone here so the two positioning systems never
+   write to the same element in the same frame. */
+.ds-tab-indicator {
+    position: absolute;
+    bottom: 4px;
+    left: 0;
+    height: 2.5px;
+    width: 1px;
+    border-radius: var(--ds-radius-pill);
+    background: var(--ws-accent, var(--ems-primary));
+    transform-origin: left center;
+    transform: translate3d(0, 0, 0) scaleX(0);
+    transition: transform .32s var(--ds-ease-out) !important;
+    will-change: transform;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Compact segmented control (Graphical / Table / Combined view-mode toggle,
+   reusable anywhere a small set of mutually-exclusive options is needed).
+   Pure CSS — no sliding-indicator JS, so it's cheap and works for any count
+   of options without a ResizeObserver. */
+.segmented-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    background: var(--ems-bg-section);
+    border: 1px solid var(--ems-border);
+    border-radius: var(--ds-radius-sm);
+}
+.segmented-control .btn {
+    border: 0 !important;
+    background: transparent !important;
+    color: var(--ems-text-secondary);
+    font-size: .78rem;
+    font-weight: 600;
+    padding: .35rem .7rem;
+    border-radius: calc(var(--ds-radius-sm) - 3px) !important;
+    box-shadow: none !important;
+    transition: color var(--ds-transition), background-color var(--ds-transition);
+}
+.segmented-control .btn:hover:not(.active) {
+    color: var(--ems-text-heading);
+    background: color-mix(in srgb, var(--ems-surface) 70%, transparent) !important;
+}
+.segmented-control .btn.active {
+    color: var(--ems-primary);
+    background: var(--ems-surface) !important;
+    font-weight: 700;
+    box-shadow: var(--ds-shadow-xs) !important;
+}
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+.card,
+.ems-card,
+.metric-card,
+.stat-card,
+.action-card {
+    border-radius: var(--ds-radius-card) !important;
+    border: 1px solid var(--ems-border);
+    box-shadow: var(--ds-shadow-sm);
+    will-change: transform;
+    transition:
+        transform var(--ds-transition),
+        box-shadow var(--ds-transition),
+        border-color var(--ds-transition) !important;
+}
+
+/* Hover lift only where a card is actually interactive */
+.metric-card:hover,
+.stat-card:hover,
+.action-card:hover,
+.card.is-interactive:hover,
+a.card:hover,
+a .card:hover {
+    transform: translateY(var(--ds-lift));
+    box-shadow: var(--ds-shadow-md);
+    border-color: color-mix(in srgb, var(--ems-primary) 22%, var(--ems-border));
+}
+
+/* =========================================================
+   FORMS
+   ========================================================= */
+.form-control,
+.form-select,
+.input-group-text {
+    border-radius: var(--ds-radius-sm) !important;
+    border: 1px solid var(--ems-border);
+    background: var(--ems-input-bg);
+    color: var(--ems-text);
+    transition:
+        border-color var(--ds-transition),
+        box-shadow var(--ds-transition),
+        background var(--ds-transition) !important;
+}
+.form-control:hover:not(:disabled),
+.form-select:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--ems-primary) 30%, var(--ems-border));
+}
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--ems-primary);
+    box-shadow: var(--ds-focus-ring);
+    outline: none;
+}
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: var(--ems-danger);
+    animation: ds-shake .38s var(--ds-ease-out);
+}
+.form-control.is-valid,
+.form-select.is-valid { border-color: var(--ems-success); }
+
+.form-check-input {
+    border-radius: 6px;
+    transition: background-color var(--ds-transition), border-color var(--ds-transition), box-shadow var(--ds-transition);
+}
+.form-check-input:checked {
+    background-color: var(--ems-primary);
+    border-color: var(--ems-primary);
+}
+.form-check-input:focus-visible { box-shadow: var(--ds-focus-ring); }
+
+/* Password visibility toggle */
+.ds-password-wrap { position: relative; }
+.ds-password-wrap .form-control { padding-right: 2.6rem; }
+.ds-password-toggle {
+    position: absolute;
+    right: .5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border: none;
+    background: transparent;
+    color: var(--ems-text-muted);
+    border-radius: var(--ds-radius-sm);
+    cursor: pointer;
+    transition: color var(--ds-transition), background var(--ds-transition);
+}
+.ds-password-toggle:hover { color: var(--ems-primary); background: var(--ems-bg-section); }
+.ds-password-toggle:focus-visible { outline: none; box-shadow: var(--ds-focus-ring); }
+.ds-password-toggle svg { transition: transform var(--ds-transition), opacity var(--ds-transition); }
+
+/* =========================================================
+   DROPDOWNS
+   ========================================================= */
+.dropdown-menu {
+    border-radius: var(--ds-radius) !important;
+    border: 1px solid var(--ems-border);
+    box-shadow: var(--ds-shadow-lg);
+    padding: var(--ds-1);
+    transform-origin: top center;
+}
+.dropdown-menu.show {
+    animation: ds-menu-in .18s var(--ds-ease-out);
+}
+@keyframes ds-menu-in {
+    from { opacity: 0; transform: translateY(-6px) scale(.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.dropdown-item {
+    border-radius: var(--ds-radius-sm);
+    padding: .45rem .65rem;
+    font-size: .84rem;
+    font-weight: 550;
+    transition: background var(--ds-transition), color var(--ds-transition);
+}
+.dropdown-item:hover,
+.dropdown-item:focus,
+.dropdown-item.ds-active {
+    background: var(--ems-bg-section);
+    color: var(--ems-primary);
+}
+
+/* =========================================================
+   MODALS
+   ========================================================= */
+.modal-backdrop.show {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    background: rgba(15, 20, 35, .42);
+    opacity: 1;
+}
+.modal-content {
+    border-radius: var(--ds-radius-card) !important;
+    border: 1px solid var(--ems-border);
+    box-shadow: var(--ds-shadow-lg);
+    overflow: hidden;
+}
+.modal.fade .modal-dialog {
+    transform: scale(.96) translateY(8px);
+    opacity: 0;
+    transition: transform .26s var(--ds-ease-out), opacity .26s var(--ds-ease-out);
+}
+.modal.show .modal-dialog {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* =========================================================
+   TABLES
+   ========================================================= */
+.table-shell,
+.ems-card .table-responsive { border-radius: var(--ds-radius-card); }
+
+.table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--ems-table-head);
+    font-size: .68rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ems-text-secondary);
+    font-weight: 700;
+}
+.table > tbody > tr {
+    transition: background var(--ds-transition), transform var(--ds-transition);
+}
+.table-hover > tbody > tr:hover > * {
+    background: var(--ems-table-hover);
+}
+.table > tbody > tr > td { padding-top: .6rem; padding-bottom: .6rem; }
+
+/* =========================================================
+   BADGES / STATUS CHIPS
+   ========================================================= */
+.badge {
+    border-radius: var(--ds-radius-pill) !important;
+    font-weight: 650;
+    letter-spacing: .01em;
+    padding: .34em .7em;
+    transition: transform var(--ds-transition), box-shadow var(--ds-transition);
+}
+.badge:hover { transform: scale(var(--ds-hover-scale)); }
+.ds-badge-pulse::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    margin-right: .4em;
+    animation: ds-pulse 1.8s ease-in-out infinite;
+}
+@keyframes ds-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: .45; transform: scale(.82); }
+}
+
+/* =========================================================
+   TOOLTIPS
+   ========================================================= */
+.tooltip .tooltip-inner {
+    border-radius: var(--ds-radius-sm);
+    background: var(--ems-text-heading);
+    color: #fff;
+    font-size: .74rem;
+    font-weight: 600;
+    padding: .38rem .6rem;
+    box-shadow: var(--ds-shadow-md);
+}
+.tooltip.show { opacity: 1; }
+.tooltip { animation: ds-fade-in .16s var(--ds-ease-out); }
+@keyframes ds-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* =========================================================
+   TOASTS
+   ========================================================= */
+.ds-toast-stack {
+    position: fixed;
+    top: var(--ds-5);
+    right: var(--ds-5);
+    z-index: 1090;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-3);
+    max-width: min(360px, calc(100vw - var(--ds-7)));
+    pointer-events: none;
+}
+.ds-toast {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ds-3);
+    padding: var(--ds-3) var(--ds-4);
+    border-radius: var(--ds-radius) !important;
+    background: var(--ds-glass-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--ds-glass-border);
+    box-shadow: var(--ds-shadow-lg);
+    color: var(--ems-text);
+    font-size: .85rem;
+    font-weight: 550;
+    pointer-events: auto;
+    animation: ds-toast-in .3s var(--ds-ease-out);
+}
+.ds-toast.is-leaving { animation: ds-toast-out .24s var(--ds-ease-out) forwards; }
+@keyframes ds-toast-in {
+    from { opacity: 0; transform: translateX(24px) scale(.96); }
+    to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes ds-toast-out {
+    to { opacity: 0; transform: translateX(24px) scale(.96); }
+}
+.ds-toast-icon {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    color: var(--ems-primary);
+}
+.ds-toast[data-variant="success"] .ds-toast-icon { color: var(--ems-success); }
+.ds-toast[data-variant="danger"]  .ds-toast-icon { color: var(--ems-danger); }
+.ds-toast[data-variant="warning"] .ds-toast-icon { color: var(--ems-warning); }
+.ds-toast-body { flex: 1; min-width: 0; }
+.ds-toast-progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 100%;
+    background: var(--ems-primary);
+    transform-origin: left center;
+    animation: ds-toast-progress linear forwards;
+}
+.ds-toast[data-variant="success"] .ds-toast-progress { background: var(--ems-success); }
+.ds-toast[data-variant="danger"]  .ds-toast-progress { background: var(--ems-danger); }
+.ds-toast[data-variant="warning"] .ds-toast-progress { background: var(--ems-warning); }
+@keyframes ds-toast-progress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* =========================================================
+   SKELETONS / SHIMMER
+   ========================================================= */
+.ds-skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--ds-radius-sm);
+    background: var(--ems-bg-section);
+    animation: ds-pulse-soft 1.6s ease-in-out infinite;
+}
+.ds-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg,
+        transparent,
+        color-mix(in srgb, var(--ems-surface) 70%, transparent),
+        transparent);
+    animation: ds-shimmer 1.6s infinite;
+}
+.ds-skeleton-text { height: .8rem; margin-bottom: var(--ds-2); }
+.ds-skeleton-title { height: 1.2rem; width: 42%; margin-bottom: var(--ds-3); }
+.ds-skeleton-circle { border-radius: 50%; }
+@keyframes ds-shimmer { to { transform: translateX(100%); } }
+@keyframes ds-pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
+
+/* =========================================================
+   EMPTY STATES
+   ========================================================= */
+.ds-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--ds-3);
+    padding: var(--ds-7) var(--ds-5);
+    color: var(--ems-text-secondary);
+}
+.ds-empty-art {
+    width: 56px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--ds-radius-card);
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--ems-primary) 14%, transparent),
+        color-mix(in srgb, var(--ems-primary) 5%, transparent));
+    color: var(--ems-primary);
+    animation: ds-float 4s ease-in-out infinite;
+}
+@keyframes ds-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-5px); }
+}
+.ds-empty-title { font-weight: 700; color: var(--ems-text-heading); font-size: .96rem; }
+.ds-empty-text { font-size: .85rem; max-width: 42ch; }
+
+/* =========================================================
+   PAGE TRANSITIONS
+   ========================================================= */
+/* NOTE: .app-content already fades/slides in on load via the existing
+   .motion-fade-up system (app.css `emsFadeIn`, driven by motion.js).
+   .ds-page is an *opt-in* equivalent for new content that isn't wrapped
+   in .app-content — it intentionally does not re-target .app-content,
+   since `animation` is a single property and a second rule here would
+   just silently replace the existing one rather than add anything. */
+@keyframes ds-page-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.ds-page {
+    animation: ds-page-in .34s var(--ds-ease-out) both;
+}
+
+/* Staggered reveal for grids of cards */
+@keyframes ds-rise-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.ds-stagger > * {
+    animation: ds-rise-in .38s var(--ds-ease-out) both;
+}
+.ds-stagger > *:nth-child(1) { animation-delay: .02s; }
+.ds-stagger > *:nth-child(2) { animation-delay: .06s; }
+.ds-stagger > *:nth-child(3) { animation-delay: .10s; }
+.ds-stagger > *:nth-child(4) { animation-delay: .14s; }
+.ds-stagger > *:nth-child(5) { animation-delay: .18s; }
+.ds-stagger > *:nth-child(6) { animation-delay: .22s; }
+.ds-stagger > *:nth-child(7) { animation-delay: .26s; }
+.ds-stagger > *:nth-child(8) { animation-delay: .30s; }
+
+/* =========================================================
+   SIDEBAR — hover glow + animated active indicator
+   ========================================================= */
+.sidebar-link {
+    position: relative;
+    border-radius: var(--ds-radius-sm) !important;
+    transition:
+        background var(--ds-transition),
+        color var(--ds-transition),
+        transform var(--ds-transition) !important;
+}
+.sidebar-link:hover {
+    transform: translateX(2px);
+    background: var(--ems-sidebar-hover);
+}
+.sidebar-link::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 3px;
+    height: 0;
+    border-radius: var(--ds-radius-pill);
+    background: var(--ems-primary);
+    transform: translateY(-50%);
+    transition: height .28s var(--ds-ease-out);
+}
+.sidebar-link.active::before { height: 58%; }
+.sidebar-link:focus-visible { outline: none; box-shadow: var(--ds-focus-ring); }
+
+/* =========================================================
+   Dark theme refinements
+   ========================================================= */
+html[data-theme="dark"] .btn-soft,
+html[data-theme="dark"] .btn-secondary,
+html[data-theme="dark"] .btn-light,
+html[data-theme="dark"] .btn-outline-secondary,
+html[data-theme="dark"] .btn-outline-primary {
+    --ds-btn-bg: color-mix(in srgb, var(--ems-surface) 92%, #fff);
+    --ds-btn-fg: var(--ems-text);
+    --ds-btn-border: var(--ems-border);
+}
+html[data-theme="dark"] .modal-backdrop.show { background: rgba(0, 0, 0, .6); }
+html[data-theme="dark"] .tooltip .tooltip-inner {
+    background: var(--ems-surface);
+    color: var(--ems-text);
+    border: 1px solid var(--ems-border);
+}

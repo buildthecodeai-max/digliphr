@@ -1,0 +1,39 @@
+{
+    "name": "company/employee-management-system",
+    "description": "Production-ready Employee Management, Attendance, Leave, HR and Payroll System",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-openssl": "*",
+        "ext-fileinfo": "*",
+        "ext-gd": "*",
+        "ext-curl": "*",
+        "vlucas/phpdotenv": "^5.6",
+        "phpmailer/phpmailer": "^6.9",
+        "dompdf/dompdf": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        },
+        "files": [
+            "app/Helpers/functions.php"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "scripts": {
+        "test": "php tests/run.php",
+        "migrate:status": "php bin/migrate.php --status",
+        "migrate:dry-run": "php bin/migrate.php --dry-run",
+        "post-install-cmd": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ]
+    }
+}

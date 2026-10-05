@@ -1,0 +1,6 @@
+# Deny direct web access to install scripts (use /install route via public/index.php)
+<IfModule mod_authz_core.c>
+    <Files "installed.lock">
+        Require all denied
+    </Files>
+</IfModule>

@@ -1,0 +1,45 @@
+name: Employee Management Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to deploy
+        required: true
+        default: main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, openssl, fileinfo, gd, curl
+          coverage: none
+      - run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+      - run: php tests/run.php
+      - name: Package release
+        run: tar --exclude=.git --exclude=storage/logs --exclude=storage/backups -czf release.tar.gz .
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Configure trusted deploy host
+        env:
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Upload and activate
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          scp release.tar.gz "$DEPLOY_USER@$DEPLOY_HOST:/tmp/employee-management-release.tar.gz"
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p '$DEPLOY_PATH' && tar -xzf /tmp/employee-management-release.tar.gz -C '$DEPLOY_PATH' && cd '$DEPLOY_PATH' && php bin/migrate.php --up && rm -f /tmp/employee-management-release.tar.gz"

@@ -1,0 +1,44 @@
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# PHP dependencies
+vendor/
+
+# Composer cache
+composer.phar
+
+# Storage (logs, uploads, exports)
+storage/logs/*
+storage/exports/*
+storage/payslips/*
+storage/attendance-images/*
+storage/employee-documents/*
+storage/leave-attachments/*
+storage/chat-attachments/*
+storage/monitoring-screenshots/*
+!storage/*/.gitkeep
+
+# Temp & build artifacts
+tmp/
+dist/
+*.zip
+*.tar.gz
+
+# Desktop agent
+desktop-agent/node_modules/
+desktop-agent/dist/
+desktop-agent/.env
+
+# OS & editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# PHP temp
+*.log
+php_errors.log

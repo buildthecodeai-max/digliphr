@@ -1,0 +1,64 @@
+{
+  "name": "ems-work-monitoring-agent",
+  "version": "0.1.0",
+  "description": "Diglip Work Activity Monitoring Agent — quiet tray, periodic screenshots",
+  "main": "src/main.js",
+  "author": "Diglip",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging",
+    "dist": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "screenshot-desktop": "^1.15.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.diglip.ems-agent",
+    "productName": "Diglip Work Monitor",
+    "copyright": "Copyright © 2026 Diglip",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "!**/.env",
+      "!**/node_modules/.cache"
+    ],
+    "extraResources": [],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Diglip Work Monitor",
+      "installerIcon": "assets/icon.png",
+      "uninstallerIcon": "assets/icon.png",
+      "deleteAppDataOnUninstall": false
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.business"
+    },
+    "publish": null
+  }
+}

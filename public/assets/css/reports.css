@@ -1,0 +1,289 @@
+/* =========================================================
+   Attendance & HR Reports — visual layer on top of the shared
+   design system (app.css / design-system.css). Every color/radius/
+   shadow here is a var(--ems-*) or var(--ds-*) token so light/dark
+   and future theme swaps keep working automatically.
+   ========================================================= */
+
+/* ---------- Compact KPI cards ----------
+   Scoped to .metrics-row (every report/executive-summary KPI grid uses this
+   wrapper) rather than the base .metric-card, so dashboards/other pages that
+   show a lone metric-card outside a KPI grid keep their current sizing. */
+.metrics-row .metric-card {
+    padding: .65rem .8rem .6rem;
+    display: flex;
+    flex-direction: column;
+}
+.metrics-row .metric-card .metric-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    margin-bottom: 0;
+    order: -1;
+    position: absolute;
+    top: .6rem;
+    right: .65rem;
+}
+.metrics-row .metric-card .metric-icon i,
+.metrics-row .metric-card .metric-icon svg,
+.metrics-row .metric-card .metric-icon [data-lucide] {
+    width: 13px;
+    height: 13px;
+}
+.metrics-row .metric-card { position: relative; }
+.metrics-row .metric-card .metric-label {
+    font-size: .66rem;
+    padding-right: 1.8rem;
+}
+.metrics-row .metric-card .metric-value {
+    font-size: 1.2rem;
+    margin-top: .15rem;
+}
+.metrics-row .metric-card .metric-sub { font-size: .68rem; margin-top: .05rem; }
+.metrics-row .metric-card .metric-delta {
+    margin-top: .3rem;
+    font-size: .66rem;
+    padding: .1rem .4rem;
+}
+.metrics-row .metric-card .metric-spark { margin-top: .3rem; }
+.metrics-row.g-2 { row-gap: .5rem !important; }
+
+/* ---------- Report sub-tabs (Overview / Employee Summary / ...) ---------- */
+.report-subtabs-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    margin: 0 -.15rem;
+    padding: 0 .15rem;
+}
+.report-subtabs-scroll::-webkit-scrollbar { height: 6px; }
+.report-subtabs-scroll::-webkit-scrollbar-thumb { background: var(--ems-border); border-radius: 999px; }
+
+.report-subtabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 5px;
+    background: var(--ems-bg-section);
+    border-radius: var(--ds-radius-pill, 999px);
+    list-style: none;
+    margin: 0 0 1.1rem;
+    white-space: nowrap;
+}
+.report-subtabs .nav-item { flex: 0 0 auto; }
+.report-subtabs .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .42rem .85rem;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--ems-text-secondary);
+    border-radius: var(--ds-radius-pill, 999px) !important;
+    background: transparent !important;
+    border: none !important;
+    transition: color var(--ds-transition, .2s ease), background-color var(--ds-transition, .2s ease), transform .15s ease;
+    white-space: nowrap;
+}
+.report-subtabs .nav-link svg,
+.report-subtabs .nav-link i { width: 14px; height: 14px; flex: 0 0 auto; }
+.report-subtabs .nav-link:hover {
+    color: var(--ems-text-heading);
+    background: color-mix(in srgb, var(--ems-primary) 8%, transparent) !important;
+}
+.report-subtabs .nav-link.active {
+    color: #fff !important;
+    background: linear-gradient(135deg, var(--ems-primary), var(--ems-primary-dark)) !important;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--ems-primary) 35%, transparent);
+}
+/* This container renders its own gradient pill per-link; the shared sliding
+   .ds-tab-indicator (app.css/design-system.js) is designed for an underline
+   look and would visually fight the pill background, so it's suppressed
+   here specifically. */
+.report-subtabs .ds-tab-indicator { display: none !important; }
+
+/* ---------- Overview hero banner ---------- */
+.report-hero {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    flex-wrap: wrap;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 1.25rem;
+    border-radius: var(--ds-radius-card, 16px);
+    background: linear-gradient(120deg, var(--hero-tone, var(--ems-primary)) 0%, color-mix(in srgb, var(--hero-tone, var(--ems-primary)) 82%, black 18%) 100%);
+    color: #fff;
+    overflow: hidden;
+    box-shadow: 0 16px 40px color-mix(in srgb, var(--hero-tone, var(--ems-primary)) 30%, transparent);
+}
+.report-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(480px 240px at 88% -10%, rgba(255,255,255,.22), transparent 60%),
+        radial-gradient(320px 220px at 100% 120%, rgba(255,255,255,.12), transparent 60%);
+    pointer-events: none;
+}
+.report-hero-ring {
+    position: relative;
+    width: 108px;
+    height: 108px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: conic-gradient(#fff calc(var(--pct, 0) * 1%), rgba(255,255,255,.22) 0);
+}
+.report-hero-ring::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--hero-tone, var(--ems-primary-dark)) 80%, black 20%);
+}
+.report-hero-ring-value {
+    position: relative;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+.report-hero-body { position: relative; flex: 1 1 320px; min-width: 0; }
+.report-hero-eyebrow {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    opacity: .78;
+    margin-bottom: .3rem;
+}
+.report-hero-headline {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -.01em;
+    margin: 0 0 .3rem;
+}
+.report-hero-sub { font-size: .86rem; opacity: .88; margin: 0; max-width: 60ch; }
+.report-hero-stats {
+    position: relative;
+    display: flex;
+    gap: 1.75rem;
+    flex-wrap: wrap;
+    flex: 0 0 auto;
+}
+.report-hero-stat { text-align: left; }
+.report-hero-stat-value { font-size: 1.3rem; font-weight: 800; line-height: 1.1; }
+.report-hero-stat-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; opacity: .78; margin-top: .15rem; }
+
+/* ---------- KPI group headers ---------- */
+.kpi-group-title {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--ems-text-muted);
+    margin: 1.3rem 0 .6rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+.kpi-group-title:first-child { margin-top: 0; }
+.kpi-group-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--ems-border);
+}
+
+/* ---------- Employee avatar chip ---------- */
+.emp-chip { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.emp-chip-avatar {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: .72rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, var(--avatar-a, var(--ems-primary)), var(--avatar-b, var(--ems-primary-dark)));
+}
+.emp-chip-text { min-width: 0; }
+.emp-chip-name { font-weight: 600; color: var(--ems-text-heading); font-size: .84rem; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.emp-chip-code { font-size: .72rem; color: var(--ems-text-muted); }
+
+/* ---------- Attendance % progress bar ---------- */
+.pct-bar-wrap { display: flex; align-items: center; gap: .5rem; min-width: 84px; }
+.pct-bar-track { flex: 1; height: 6px; border-radius: 999px; background: var(--ems-bg-section); overflow: hidden; min-width: 44px; }
+.pct-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--pct-color, var(--ems-success)), color-mix(in srgb, var(--pct-color, var(--ems-success)) 70%, white)); transition: width .5s var(--ds-ease-out, ease); }
+.pct-bar-label { font-size: .82rem; font-weight: 700; color: var(--ems-text-heading); min-width: 2.6rem; text-align: right; }
+
+/* ---------- Report tables: sticky header + refined rows ---------- */
+.report-table-shell { max-height: 560px; overflow: auto; border-radius: var(--ds-radius-card, 14px); }
+.report-table-shell table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--ems-card);
+    box-shadow: 0 1px 0 var(--ems-border);
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--ems-text-muted);
+    font-weight: 700;
+}
+.report-table-shell table tbody tr { transition: background-color .15s ease; }
+.report-table-shell table tbody tr:hover { background: var(--ems-bg-section); }
+.report-table-shell table tfoot td {
+    position: sticky;
+    bottom: 0;
+    background: var(--ems-bg-section);
+    z-index: 2;
+}
+
+/* ---------- Monthly sheet ---------- */
+.monthly-sheet-table thead th { position: sticky; top: 0; z-index: 3; background: var(--ems-card); }
+.monthly-sheet-table td:first-child,
+.monthly-sheet-table th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--ems-card);
+    box-shadow: 1px 0 0 var(--ems-border);
+}
+.sheet-pill {
+    display: inline-grid;
+    place-items: center;
+    min-width: 26px;
+    height: 22px;
+    padding: 0 4px;
+    border-radius: 7px;
+    font-size: .68rem;
+    font-weight: 700;
+    color: var(--pill-fg, var(--ems-text-secondary));
+    background: var(--pill-bg, var(--ems-bg-section));
+}
+.sheet-legend { display: flex; flex-wrap: wrap; gap: .5rem .9rem; }
+.sheet-legend-item { display: inline-flex; align-items: center; gap: .4rem; font-size: .76rem; color: var(--ems-text-secondary); }
+
+/* ---------- Section card header with icon ---------- */
+.report-card-title { display: flex; align-items: center; gap: .55rem; font-weight: 700; }
+.report-card-title .rct-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: var(--ems-primary-soft, color-mix(in srgb, var(--ems-primary) 12%, transparent));
+    color: var(--ems-primary);
+    flex: 0 0 auto;
+}
+.report-card-title .rct-icon svg { width: 14px; height: 14px; }
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .report-hero-ring::before { background: color-mix(in srgb, var(--hero-tone, var(--ems-primary-dark)) 88%, black 18%); }
+}
+:root[data-theme="dark"] .report-hero-ring::before { background: color-mix(in srgb, var(--hero-tone, var(--ems-primary-dark)) 88%, black 18%); }

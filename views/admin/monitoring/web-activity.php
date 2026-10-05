@@ -1,0 +1,26 @@
+<?php /** @var array $records */ /** @var array $summary */ /** @var array $topDomains */ /** @var array $teamSummary */ /** @var array $filters */ ?>
+<div class="page-header">
+    <div><h1>Website activity</h1><p class="subtitle">Domain history, distraction controls, and work-hour focus signals.</p></div>
+    <a href="/admin/monitoring/site-rules" class="btn btn-primary"><i data-lucide="sliders-horizontal"></i> Manage rules</a>
+</div>
+<?php if (!empty($teamSummary)): ?>
+<div class="card mt-3"><div class="card-header">Team summary for this period</div><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Employee</th><th>Focus</th><th>Neutral</th><th>Distraction</th><th>Blocked</th><th>Visits</th><th>Last activity</th></tr></thead><tbody><?php foreach ($teamSummary as $row): ?><tr><td><strong><?= e(trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''))) ?></strong><div class="small text-muted"><?= e($row['employee_code'] ?? '') ?></div></td><td><?= e((string) round(((int) $row['productive_seconds']) / 60)) ?> min</td><td><?= e((string) round(((int) $row['neutral_seconds']) / 60)) ?> min</td><td class="text-warning fw-semibold"><?= e((string) round(((int) $row['distracting_seconds']) / 60)) ?> min</td><td class="text-danger fw-semibold"><?= e((string) round(((int) $row['blocked_seconds']) / 60)) ?> min</td><td><?= e((string) $row['visits']) ?></td><td><?= e($row['last_activity'] ?? '—') ?></td></tr><?php endforeach; ?></tbody></table></div></div>
+<?php endif; ?>
+<div class="row g-3 mb-3">
+    <?php foreach ([['Focus time', ($summary['productive_minutes'] ?? 0) . ' min', 'sparkles', 'tone-mint'], ['Neutral', ($summary['neutral_minutes'] ?? 0) . ' min', 'minus-circle', 'tone-blue'], ['Distraction', ($summary['distracting_minutes'] ?? 0) . ' min', 'triangle-alert', 'tone-orange'], ['Policy actions', (string) ($summary['warnings'] ?? 0), 'shield-alert', 'tone-red']] as [$label, $value, $icon, $tone]): ?>
+    <div class="col-6 col-xl-3"><div class="metric-card <?= e($tone) ?>"><div class="metric-icon"><i data-lucide="<?= e($icon) ?>"></i></div><div class="metric-label"><?= e($label) ?></div><div class="metric-value"><?= e($value) ?></div></div></div>
+    <?php endforeach; ?>
+</div>
+<div class="card mb-3"><div class="card-body"><form class="row g-2 align-items-end" method="get">
+    <div class="col-md-2"><label class="form-label small">From</label><input type="date" name="date_from" class="form-control" value="<?= e($filters['date_from'] ?? '') ?>"></div>
+    <div class="col-md-2"><label class="form-label small">To</label><input type="date" name="date_to" class="form-control" value="<?= e($filters['date_to'] ?? '') ?>"></div>
+    <div class="col-md-3"><label class="form-label small">Domain</label><input type="search" name="domain" class="form-control" placeholder="youtube.com" value="<?= e($filters['domain'] ?? '') ?>"></div>
+    <div class="col-md-2"><label class="form-label small">Category</label><select name="category" class="form-select"><option value="">All categories</option><?php foreach (['productive','neutral','distracting','blocked'] as $category): ?><option value="<?= $category ?>" <?= ($filters['category'] ?? '') === $category ? 'selected' : '' ?>><?= ucfirst($category) ?></option><?php endforeach; ?></select></div>
+    <div class="col-md-2"><button class="btn btn-primary">Apply filters</button></div>
+</form></div></div>
+<div class="row g-3">
+    <div class="col-xl-8"><div class="card"><div class="card-header">Website history</div><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Employee</th><th>Domain</th><th>Category</th><th>Action</th><th>Time</th><th>Duration</th></tr></thead><tbody>
+    <?php foreach ($records['data'] as $row): ?><tr><td><?= e(trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''))) ?></td><td><strong><?= e($row['domain']) ?></strong><div class="small text-muted"><?= e($row['started_at']) ?></div></td><td><?= status_badge($row['category']) ?></td><td><?= e(ucfirst($row['policy_action'])) ?></td><td><?= e(ucfirst(str_replace('_', ' ', $row['work_state']))) ?></td><td><?= e((string) round(((int) $row['duration_seconds']) / 60, 1)) ?> min</td></tr><?php endforeach; ?>
+    <?php if (empty($records['data'])): ?><tr><td colspan="6"><div class="empty-state"><i data-lucide="globe-2"></i><strong>No website activity found</strong><span>Activity appears after the monitoring agent sends domain events during a work schedule.</span></div></td></tr><?php endif; ?></tbody></table></div></div></div>
+    <div class="col-xl-4"><div class="card"><div class="card-header">Top distracting domains</div><div class="list-group list-group-flush"><?php foreach ($topDomains as $row): ?><div class="list-group-item d-flex justify-content-between align-items-center"><div><strong><?= e($row['domain']) ?></strong><div class="small text-muted"><?= e((string) $row['visits']) ?> visits</div></div><span class="badge text-bg-warning"><?= e((string) round(((int) $row['total_seconds']) / 60)) ?> min</span></div><?php endforeach; ?><?php if (empty($topDomains)): ?><div class="p-3 text-muted small">No distracting domains in this period.</div><?php endif; ?></div></div></div>
+</div>

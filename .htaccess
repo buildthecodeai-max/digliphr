@@ -1,0 +1,15 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Already under /public — let public/.htaccess handle it
+    RewriteRule ^public/ - [L]
+
+    # Rewrite ALL other requests into public/ (cPanel when docroot is project root)
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Fallback if mod_rewrite is unavailable: DirectoryIndex still hits root index.php for "/"
+DirectoryIndex index.php

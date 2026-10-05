@@ -1,0 +1,25 @@
+/* Instant UI mode: the application should render and respond without motion delays. */
+*,
+*::before,
+*::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    animation-delay: 0s !important;
+    transition: none !important;
+    transition-delay: 0s !important;
+}
+
+/* Entrance-animation helpers otherwise begin hidden. */
+.motion-fade-in,
+.motion-fade-up,
+.motion-scale-in,
+.stagger-item,
+.ds-stagger > * {
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+/* Bootstrap fades must still become visible when their state is active. */
+.fade.show {
+    opacity: 1 !important;
+}

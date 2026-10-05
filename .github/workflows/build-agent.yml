@@ -1,0 +1,67 @@
+name: Build Desktop Agent (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'agent-v*'
+    paths:
+      - 'desktop-agent/**'
+      - '.github/workflows/build-agent.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        working-directory: desktop-agent
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: desktop-agent/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows installer
+        run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DiglipWorkMonitor-Setup
+          path: desktop-agent/dist/*.exe
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/agent-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Diglip Work Monitor ${{ github.ref_name }}
+          body: |
+            ## Diglip Work Monitor — Windows Installer
+
+            ### Install
+            1. Download `Diglip Work Monitor Setup.exe` below
+            2. Run it and follow the installer steps
+            3. On first launch, enter your Diglip employee email and password
+            4. The app will appear in your system tray and monitor activity automatically
+
+            ### What it does
+            - Registers your device with the HR portal
+            - Sends activity heartbeats while you work
+            - Captures periodic screenshots (interval set by your manager)
+            - Tracks active application and window titles
+          files: desktop-agent/dist/*.exe
+          draft: false
+          prerelease: false
