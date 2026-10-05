@@ -25,7 +25,7 @@ if (!empty($filters['branch_id'])) {
         if ((int) $b['id'] === (int) $filters['branch_id']) { $activeChips[] = 'Branch: ' . $b['name']; break; }
     }
 }
-if (!empty($filters['compare'])) { $activeChips[] = 'Compare'; }
+// Compare removed — no longer used
 ?>
 <form class="filter-bar filter-bar-compact" method="get" action="<?= e($action) ?>" id="reportFilterForm">
     <div class="filter-bar-inner">
@@ -117,10 +117,6 @@ if (!empty($filters['compare'])) { $activeChips[] = 'Compare'; }
         <!-- Actions -->
         <div class="filter-actions">
             <input type="hidden" name="view" value="<?= e($viewMode) ?>">
-            <label class="filter-compare-label">
-                <input type="checkbox" name="compare" value="1" class="form-check-input" <?= !empty($filters['compare']) ? 'checked' : '' ?>>
-                <span>Compare</span>
-            </label>
             <button class="btn btn-primary btn-sm filter-apply-btn" type="submit" data-ds-loading>
                 <i data-lucide="sliders-horizontal" style="width:13px;height:13px"></i> Apply
             </button>

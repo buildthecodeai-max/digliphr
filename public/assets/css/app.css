@@ -751,21 +751,7 @@ h1, h2, h3, h4, h5, .page-header h1, .topbar-title {
     flex-shrink: 0;
     margin-left: .25rem;
 }
-.filter-compare-label {
-    display: flex;
-    align-items: center;
-    gap: .3rem;
-    font-size: .78rem;
-    color: var(--ems-text-secondary);
-    cursor: pointer;
-    white-space: nowrap;
-    user-select: none;
-}
-.filter-compare-label .form-check-input {
-    margin: 0;
-    width: 14px;
-    height: 14px;
-}
+
 .filter-apply-btn,
 .filter-reset-btn {
     font-size: .78rem !important;
