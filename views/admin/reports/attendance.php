@@ -79,6 +79,11 @@ $activeInOverflow = in_array($section, $overflowKeys, true);
         var open = btn.getAttribute('aria-expanded') === 'true';
         btn.setAttribute('aria-expanded', open ? 'false' : 'true');
         menu.classList.toggle('is-open', !open);
+        if (!open) {
+            var r = btn.getBoundingClientRect();
+            menu.style.top  = (r.bottom + 6) + 'px';
+            menu.style.left = r.left + 'px';
+        }
     });
     document.addEventListener('click', function () {
         btn.setAttribute('aria-expanded', 'false');
