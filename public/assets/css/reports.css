@@ -181,6 +181,27 @@ html[data-theme="dark"] .subtabs-dropdown {
     border-color: var(--ems-border);
 }
 
+/* ---------- Date-grouped attendance rows ---------- */
+.att-date-group-row td {
+    background: var(--ems-bg-section) !important;
+    padding: .32rem .75rem !important;
+    border-top: 2px solid var(--ems-border) !important;
+    border-bottom: 1px solid var(--ems-border) !important;
+}
+.att-date-group-row:first-child td { border-top: none !important; }
+.att-date-label {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--ems-primary);
+}
+.att-date-count {
+    font-size: .7rem;
+    color: var(--ems-text-muted);
+    margin-left: .6rem;
+}
+
 /* ---------- Overview hero banner ---------- */
 .report-hero {
     position: relative;

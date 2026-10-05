@@ -92,6 +92,13 @@ $periodLabel = (!empty($filters['from']) && !empty($filters['to']))
 <?php endif; ?>
 
 <?php if ($showTables): ?>
+<?php
+// Group records by date for the date-split view
+$byDate = [];
+foreach ($table['data'] as $r) {
+    $byDate[$r['attendance_date']][] = $r;
+}
+?>
 <div class="card ems-card">
     <div class="card-header d-flex justify-content-between">
         <span>Attendance Detail</span>
@@ -99,13 +106,19 @@ $periodLabel = (!empty($filters['from']) && !empty($filters['to']))
     </div>
     <div class="table-responsive">
         <table class="table table-sm mb-0 align-middle">
-            <thead><tr><th>Date</th><th>Employee</th><th>Dept</th><th>Shift</th><th>In</th><th>Out</th><th>Hours</th><th>OT</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Employee</th><th>Dept</th><th>Shift</th><th>In</th><th>Out</th><th>Hours</th><th>OT</th><th>Status</th><th></th></tr></thead>
             <tbody>
             <?php if (empty($table['data'])): ?>
-                <tr><td colspan="10"><div class="empty-state mb-0 py-4">No attendance records were found for the selected period.</div></td></tr>
-            <?php else: foreach ($table['data'] as $r): ?>
+                <tr><td colspan="9"><div class="empty-state mb-0 py-4">No attendance records were found for the selected period.</div></td></tr>
+            <?php else: foreach ($byDate as $attDate => $dateRows): ?>
+                <tr class="att-date-group-row">
+                    <td colspan="9">
+                        <span class="att-date-label"><?= e(date('l, j F Y', strtotime($attDate))) ?></span>
+                        <span class="att-date-count"><?= count($dateRows) ?> employee<?= count($dateRows) !== 1 ? 's' : '' ?></span>
+                    </td>
+                </tr>
+                <?php foreach ($dateRows as $r): ?>
                 <tr>
-                    <td><?= e(format_date($r['attendance_date'])) ?></td>
                     <td><div class="fw-semibold"><?= e($r['employee_name']) ?></div><div class="small text-muted"><?= e($r['employee_code']) ?></div></td>
                     <td><?= e($r['department_name'] ?? '—') ?></td>
                     <td><?= e($r['shift_name'] ?? '—') ?></td>
@@ -130,6 +143,7 @@ $periodLabel = (!empty($filters['from']) && !empty($filters['to']))
                         </button>
                     </td>
                 </tr>
+                <?php endforeach; ?>
             <?php endforeach; endif; ?>
             </tbody>
         </table>
