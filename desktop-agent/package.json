@@ -50,8 +50,6 @@
       "createDesktopShortcut": false,
       "createStartMenuShortcut": true,
       "shortcutName": "Diglip Work Monitor",
-      "installerIcon": "assets/icon.png",
-      "uninstallerIcon": "assets/icon.png",
       "deleteAppDataOnUninstall": false
     },
     "mac": {
