@@ -322,15 +322,15 @@
             }
         }
         _prevUnread = parsed.unread;
-        if (!parsed.items.length) {
+        var unreadItems = parsed.items.filter(function (n) { return !Number(n.is_read); });
+        if (!unreadItems.length) {
             list.innerHTML = '<div class="p-3 text-muted">You\'re all caught up.</div>';
             return;
         }
-        list.innerHTML = parsed.items.slice(0, 8).map(function (n) {
+        list.innerHTML = unreadItems.slice(0, 8).map(function (n) {
             var href = n.action_url || '#';
-            var unreadCls = !Number(n.is_read) ? ' unread' : '';
             var time = _relativeTime(n.created_at);
-            return '<a class="list-group-item list-group-item-action' + unreadCls + '" href="' + href + '" data-notif-id="' + (n.id || '') + '">' +
+            return '<a class="list-group-item list-group-item-action unread" href="' + href + '" data-notif-id="' + (n.id || '') + '">' +
                 '<div class="fw-semibold">' + (n.title || 'Notification') + '</div>' +
                 '<div class="text-muted small">' + (n.message || '') + '</div>' +
                 (time ? '<div class="notif-time">' + time + '</div>' : '') +
