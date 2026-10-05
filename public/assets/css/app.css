@@ -1017,20 +1017,30 @@ h1, h2, h3, h4, h5, .page-header h1, .topbar-title {
 
 /* ---------- Report tabs ---------- */
 .report-tabs {
-    gap: .25rem;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: .2rem;
     background: var(--ems-card);
     border: 1px solid var(--ems-border);
     border-radius: var(--ems-radius-md);
-    padding: .35rem;
+    padding: .3rem;
     box-shadow: var(--ems-shadow-xs);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    white-space: nowrap;
 }
+.report-tabs::-webkit-scrollbar { height: 3px; }
+.report-tabs::-webkit-scrollbar-thumb { background: var(--ems-border); border-radius: 999px; }
+.report-tabs .nav-item { flex: 0 0 auto; }
 .report-tabs .nav-link {
     color: var(--ems-text-muted);
     font-weight: 650;
-    font-size: .82rem;
+    font-size: .78rem;
     border: 0;
-    border-radius: 12px !important;
-    padding: .55rem .9rem;
+    border-radius: 10px !important;
+    padding: .38rem .75rem;
+    white-space: nowrap;
 }
 .report-tabs .nav-link:hover { color: var(--ems-primary); background: var(--ems-soft-violet); }
 /* .report-tabs .nav-link.active — canonical definition lives in design-system.css
