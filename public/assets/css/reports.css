@@ -61,33 +61,35 @@
 .report-subtabs-scroll::-webkit-scrollbar-thumb { background: var(--ems-border); border-radius: 999px; }
 
 .report-subtabs {
-    display: inline-flex;
+    display: flex;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 2px;
-    padding: 5px;
+    padding: 4px;
     background: var(--ems-bg-section);
     border-radius: var(--ds-radius-pill, 999px);
     list-style: none;
-    margin: 0 0 1.1rem;
-    white-space: nowrap;
+    margin: 0 0 1rem;
+    min-width: max-content;
 }
 .report-subtabs .nav-item { flex: 0 0 auto; }
 .report-subtabs .nav-link {
     display: inline-flex;
     align-items: center;
-    gap: .4rem;
-    padding: .42rem .85rem;
-    font-size: .8rem;
+    gap: .3rem;
+    padding: .28rem .65rem;
+    font-size: .74rem;
     font-weight: 600;
     color: var(--ems-text-secondary);
     border-radius: var(--ds-radius-pill, 999px) !important;
     background: transparent !important;
     border: none !important;
-    transition: color var(--ds-transition, .2s ease), background-color var(--ds-transition, .2s ease), transform .15s ease;
+    transition: color var(--ds-transition, .2s ease), background-color var(--ds-transition, .2s ease);
     white-space: nowrap;
+    letter-spacing: .01em;
 }
 .report-subtabs .nav-link svg,
-.report-subtabs .nav-link i { width: 14px; height: 14px; flex: 0 0 auto; }
+.report-subtabs .nav-link i { width: 12px; height: 12px; flex: 0 0 auto; }
 .report-subtabs .nav-link:hover {
     color: var(--ems-text-heading);
     background: color-mix(in srgb, var(--ems-primary) 8%, transparent) !important;
@@ -95,7 +97,7 @@
 .report-subtabs .nav-link.active {
     color: #fff !important;
     background: linear-gradient(135deg, var(--ems-primary), var(--ems-primary-dark)) !important;
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--ems-primary) 35%, transparent);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--ems-primary) 30%, transparent);
 }
 /* This container renders its own gradient pill per-link; the shared sliding
    .ds-tab-indicator (app.css/design-system.js) is designed for an underline
