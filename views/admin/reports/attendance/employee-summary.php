@@ -33,6 +33,13 @@ $initials = static function (string $name) {
     return implode('', $chars) ?: '?';
 };
 $pctColor = static fn (float $pct) => $pct >= 90 ? '#22C55E' : ($pct >= 75 ? '#F59E0B' : '#EF4444');
+
+// Group current page rows by department
+$byDept = [];
+foreach ($pageRows as $r) {
+    $byDept[$r['department'] ?? 'No Department'][] = $r;
+}
+ksort($byDept);
 ?>
 <div class="card ems-card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -70,10 +77,17 @@ $pctColor = static fn (float $pct) => $pct >= 90 ? '#22C55E' : ($pct >= 75 ? '#F
             <tbody>
             <?php if (!$pageRows): ?>
                 <tr><td colspan="21"><div class="empty-state mb-0 py-4">No employees match the selected filters.</div></td></tr>
-            <?php else: foreach ($pageRows as $r):
-                $detailQs = http_build_query(array_merge($baseQs, ['section' => 'employee_detail', 'employee_id' => $r['employee_id']]));
-            ?>
-                <?php [$avatarA, $avatarB] = $avatarFor($r['employee_code'] ?? $r['employee_name']); ?>
+            <?php else: foreach ($byDept as $deptName => $deptRows): ?>
+                <tr class="att-date-group-row">
+                    <td colspan="21">
+                        <span class="att-date-label"><?= e($deptName) ?></span>
+                        <span class="att-date-count"><?= count($deptRows) ?> employee<?= count($deptRows) !== 1 ? 's' : '' ?></span>
+                    </td>
+                </tr>
+                <?php foreach ($deptRows as $r):
+                    $detailQs = http_build_query(array_merge($baseQs, ['section' => 'employee_detail', 'employee_id' => $r['employee_id']]));
+                    [$avatarA, $avatarB] = $avatarFor($r['employee_code'] ?? $r['employee_name']);
+                ?>
                 <tr class="js-emp-row" style="cursor:pointer" data-href="/admin/reports/attendance?<?= e($detailQs) ?>">
                     <td>
                         <div class="emp-chip">
@@ -114,6 +128,7 @@ $pctColor = static fn (float $pct) => $pct >= 90 ? '#22C55E' : ($pct >= 75 ? '#F
                         <?php if ((int) $r['missing_attendance'] > 0): ?><span class="badge bg-warning">Missing</span><?php endif; ?>
                     </td>
                 </tr>
+                <?php endforeach; ?>
             <?php endforeach; endif; ?>
             </tbody>
             <?php if ($pageRows): ?>
