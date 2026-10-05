@@ -683,13 +683,19 @@ h1, h2, h3, h4, h5, .page-header h1, .topbar-title {
 
 /* Compact inline filter bar */
 .filter-bar.filter-bar-compact {
-    padding: .5rem .75rem;
+    padding: .45rem .75rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
 }
+.filter-bar.filter-bar-compact::-webkit-scrollbar { height: 4px; }
+.filter-bar.filter-bar-compact::-webkit-scrollbar-thumb { background: var(--ems-border); border-radius: 999px; }
 .filter-bar-inner {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: .25rem .5rem;
+    flex-wrap: nowrap;
+    gap: .25rem .4rem;
+    min-width: max-content;
 }
 .filter-field {
     display: flex;
@@ -721,11 +727,12 @@ h1, h2, h3, h4, h5, .page-header h1, .topbar-title {
     border-radius: 8px !important;
 }
 .filter-input-date {
-    width: 118px !important;
+    width: 110px !important;
     font-size: .78rem !important;
-    padding: .3rem .45rem !important;
+    padding: .3rem .4rem !important;
     height: 30px !important;
     border-radius: 8px !important;
+    cursor: pointer;
 }
 .filter-field-employee .filter-select {
     max-width: 160px;
@@ -741,7 +748,8 @@ h1, h2, h3, h4, h5, .page-header h1, .topbar-title {
     display: flex;
     align-items: center;
     gap: .4rem;
-    margin-left: auto;
+    flex-shrink: 0;
+    margin-left: .25rem;
 }
 .filter-compare-label {
     display: flex;
