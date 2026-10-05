@@ -105,6 +105,82 @@
    here specifically. */
 .report-subtabs .ds-tab-indicator { display: none !important; }
 
+/* ---------- "More" overflow dropdown ---------- */
+.subtabs-more-wrap {
+    position: relative;
+}
+.subtabs-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    cursor: pointer;
+    background: transparent !important;
+    border: none !important;
+    color: var(--ems-text-secondary);
+}
+.subtabs-more-btn.active {
+    color: #fff !important;
+    background: linear-gradient(135deg, var(--ems-primary), var(--ems-primary-dark)) !important;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--ems-primary) 30%, transparent);
+}
+.subtabs-more-btn:hover:not(.active) {
+    color: var(--ems-text-heading);
+    background: color-mix(in srgb, var(--ems-primary) 8%, transparent) !important;
+}
+.subtabs-more-caret {
+    width: 11px !important;
+    height: 11px !important;
+    transition: transform .2s ease;
+    flex-shrink: 0;
+}
+[aria-expanded="true"] .subtabs-more-caret {
+    transform: rotate(180deg);
+}
+.subtabs-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 200px;
+    background: var(--ems-card);
+    border: 1px solid var(--ems-border);
+    border-radius: 14px;
+    box-shadow: var(--ems-shadow-md);
+    padding: .35rem;
+    list-style: none;
+    margin: 0;
+    z-index: 100;
+}
+.subtabs-dropdown.is-open { display: block; }
+.subtabs-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .38rem .7rem;
+    border-radius: 10px;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--ems-text-secondary);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background .15s, color .15s;
+}
+.subtabs-dropdown-item svg,
+.subtabs-dropdown-item i { width: 13px; height: 13px; flex-shrink: 0; }
+.subtabs-dropdown-item:hover {
+    background: color-mix(in srgb, var(--ems-primary) 8%, transparent);
+    color: var(--ems-text-heading);
+}
+.subtabs-dropdown-item.active {
+    background: linear-gradient(135deg, var(--ems-primary), var(--ems-primary-dark));
+    color: #fff;
+}
+
+html[data-theme="dark"] .subtabs-dropdown {
+    background: var(--ems-card);
+    border-color: var(--ems-border);
+}
+
 /* ---------- Overview hero banner ---------- */
 .report-hero {
     position: relative;
