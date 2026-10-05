@@ -2,6 +2,8 @@ name: Employee Management CI
 
 on:
   push:
+    branches: ['**']
+    tags-ignore: ['agent-v*']
   pull_request:
 
 jobs:
