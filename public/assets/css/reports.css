@@ -169,10 +169,12 @@
     background: color-mix(in srgb, var(--ems-primary) 8%, transparent);
     color: var(--ems-text-heading);
 }
-.subtabs-dropdown-item.active {
+.subtabs-dropdown .subtabs-dropdown-item.active {
     background: linear-gradient(135deg, var(--ems-primary), var(--ems-primary-dark));
-    color: #fff;
+    color: #fff !important;
 }
+.subtabs-dropdown .subtabs-dropdown-item.active svg,
+.subtabs-dropdown .subtabs-dropdown-item.active i { color: #fff !important; }
 
 html[data-theme="dark"] .subtabs-dropdown {
     background: var(--ems-card);
