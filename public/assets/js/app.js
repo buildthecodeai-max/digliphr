@@ -275,46 +275,92 @@
         return { items: items, unread: unread };
     }
 
+    var _prevUnread = -1;
+
+    function _relativeTime(dateStr) {
+        if (!dateStr) return '';
+        var d = new Date(dateStr.replace(' ', 'T'));
+        if (isNaN(d)) return '';
+        var diff = Math.floor((Date.now() - d.getTime()) / 1000);
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        return Math.floor(diff / 86400) + 'd ago';
+    }
+
+    function _ringBell(btn, count, isNew) {
+        if (!btn) return;
+        btn.classList.remove('bell-ringing');
+        void btn.offsetWidth;
+        btn.classList.add('bell-ringing');
+        btn.addEventListener('animationend', function () {
+            btn.classList.remove('bell-ringing');
+        }, { once: true });
+        if (isNew && count) {
+            count.classList.remove('badge-new');
+            void count.offsetWidth;
+            count.classList.add('badge-new');
+            count.addEventListener('animationend', function () {
+                count.classList.remove('badge-new');
+            }, { once: true });
+        }
+    }
+
     function renderNotificationRows(list, count, payload) {
-        const parsed = notificationItems(payload);
+        var parsed = notificationItems(payload);
+        var btn = document.getElementById('notifBtn');
         if (count) {
             if (parsed.unread > 0) {
+                var isNew = _prevUnread >= 0 && parsed.unread > _prevUnread;
                 count.textContent = String(parsed.unread > 99 ? '99+' : parsed.unread);
                 count.classList.remove('d-none');
+                if (isNew || (_prevUnread === -1 && parsed.unread > 0)) {
+                    _ringBell(btn, count, true);
+                }
             } else {
                 count.classList.add('d-none');
             }
         }
+        _prevUnread = parsed.unread;
         if (!parsed.items.length) {
             list.innerHTML = '<div class="p-3 text-muted">You\'re all caught up.</div>';
             return;
         }
         list.innerHTML = parsed.items.slice(0, 8).map(function (n) {
-            const href = n.action_url || '#';
-            const unreadCls = !Number(n.is_read) ? ' unread' : '';
+            var href = n.action_url || '#';
+            var unreadCls = !Number(n.is_read) ? ' unread' : '';
+            var time = _relativeTime(n.created_at);
             return '<a class="list-group-item list-group-item-action' + unreadCls + '" href="' + href + '" data-notif-id="' + (n.id || '') + '">' +
                 '<div class="fw-semibold">' + (n.title || 'Notification') + '</div>' +
-                '<div class="text-muted">' + (n.message || '') + '</div></a>';
+                '<div class="text-muted small">' + (n.message || '') + '</div>' +
+                (time ? '<div class="notif-time">' + time + '</div>' : '') +
+                '</a>';
         }).join('');
     }
 
     function refreshNotifications() {
-        const list = document.getElementById('notifList');
-        const count = document.getElementById('notifCount');
+        var list = document.getElementById('notifList');
+        var count = document.getElementById('notifCount');
         if (!list && !count) return Promise.resolve();
 
         return EMS.fetchJson('/api/notifications').then(function (res) {
-            const payload = res.data || [];
+            var payload = res.data || [];
             if (list) {
                 renderNotificationRows(list, count, payload);
             } else if (count) {
-                const parsed = notificationItems(payload);
+                var parsed = notificationItems(payload);
+                var btn = document.getElementById('notifBtn');
                 if (parsed.unread > 0) {
+                    var isNew = _prevUnread >= 0 && parsed.unread > _prevUnread;
                     count.textContent = String(parsed.unread > 99 ? '99+' : parsed.unread);
                     count.classList.remove('d-none');
+                    if (isNew || (_prevUnread === -1 && parsed.unread > 0)) {
+                        _ringBell(btn, count, true);
+                    }
                 } else {
                     count.classList.add('d-none');
                 }
+                _prevUnread = parsed.unread;
             }
         }).catch(function () {
             if (list) list.innerHTML = '<div class="p-3 text-muted">Unable to load notifications.</div>';
@@ -324,22 +370,48 @@
     EMS.refreshNotifications = refreshNotifications;
 
     function initNotifications() {
-        const list = document.getElementById('notifList');
-        const count = document.getElementById('notifCount');
+        var list = document.getElementById('notifList');
+        var count = document.getElementById('notifCount');
         if (!list && !count) return;
 
         refreshNotifications();
-        // Bell uses /api/notifications (works for admin + employee). Re-poll so chat_message
-        // alerts appear while browsing other pages — chat itself uses AJAX message polling.
+        // Re-poll every 15 s so new notifications (chat messages, leave updates, etc.) appear.
         setInterval(refreshNotifications, 15000);
 
         if (list) {
             list.addEventListener('click', function (e) {
-                const link = e.target.closest('[data-notif-id]');
+                var link = e.target.closest('[data-notif-id]');
                 if (!link) return;
-                const id = link.getAttribute('data-notif-id');
+                var id = link.getAttribute('data-notif-id');
                 if (!id) return;
-                EMS.fetchJson('/api/notifications/' + id + '/read', { method: 'POST', body: {} }).catch(function () {});
+                if (link.classList.contains('unread')) {
+                    link.classList.remove('unread');
+                    EMS.fetchJson('/api/notifications/' + id + '/read', { method: 'POST', body: {} }).catch(function () {});
+                    _prevUnread = Math.max(0, _prevUnread - 1);
+                    if (count) {
+                        if (_prevUnread > 0) {
+                            count.textContent = String(_prevUnread > 99 ? '99+' : _prevUnread);
+                        } else {
+                            count.classList.add('d-none');
+                        }
+                    }
+                }
+            });
+        }
+
+        var markAllBtn = document.getElementById('notifMarkAllRead');
+        if (markAllBtn) {
+            markAllBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                EMS.fetchJson('/api/notifications/read-all', { method: 'POST', body: {} }).then(function () {
+                    if (list) {
+                        list.querySelectorAll('.list-group-item.unread').forEach(function (el) {
+                            el.classList.remove('unread');
+                        });
+                    }
+                    _prevUnread = 0;
+                    if (count) count.classList.add('d-none');
+                }).catch(function () {});
             });
         }
     }

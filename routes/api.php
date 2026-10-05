@@ -59,6 +59,16 @@ $router->group(['prefix' => '/api'], function ($router) use ($app) {
             $response->success('Notification marked as read.');
         }, [CsrfMiddleware::class]);
 
+        $router->post('/notifications/read-all', function ($request, $response) {
+            $uid = (new \App\Services\AuthService())->id();
+            if (!$uid) { $response->error('Unauthenticated.', null, 401); }
+            \App\Core\Database::getInstance()->query(
+                'UPDATE notifications SET is_read = 1, read_at = NOW() WHERE user_id = :uid AND is_read = 0',
+                ['uid' => $uid]
+            );
+            $response->success('All notifications marked as read.');
+        }, [CsrfMiddleware::class]);
+
         $router->get('/dashboard/stats', ['Admin\\DashboardController', 'stats']);
 
         $router->get('/employees/search', function ($request, $response) {

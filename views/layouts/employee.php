@@ -89,7 +89,10 @@ html.ems-sidebar-collapsed-pending .app-shell .sidebar-link .sidebar-icon { disp
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notifCount">0</span>
                     </button>
                     <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:320px" id="notifMenu">
-                        <div class="p-2 border-bottom fw-semibold small">Notifications</div>
+                        <div class="p-2 border-bottom fw-semibold small d-flex justify-content-between align-items-center">
+                            <span>Notifications</span>
+                            <button type="button" class="btn btn-sm p-0 text-muted" id="notifMarkAllRead" style="font-size:.7rem;line-height:1.2">Mark all read</button>
+                        </div>
                         <div id="notifList" class="list-group list-group-flush small" style="max-height:280px;overflow:auto">
                             <div class="p-3 text-muted">Loading…</div>
                         </div>

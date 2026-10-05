@@ -1740,3 +1740,72 @@ html[data-theme="dark"] .monitoring-shot-thumb {
 .dropdown-menu.account-menu {
     min-width: 232px;
 }
+
+/* ---------- Notification bell ---------- */
+@keyframes bell-ring {
+    0%   { transform: rotate(0); }
+    10%  { transform: rotate(18deg); }
+    20%  { transform: rotate(-16deg); }
+    30%  { transform: rotate(14deg); }
+    40%  { transform: rotate(-12deg); }
+    50%  { transform: rotate(8deg); }
+    60%  { transform: rotate(-4deg); }
+    70%  { transform: rotate(2deg); }
+    80%  { transform: rotate(-1deg); }
+    100% { transform: rotate(0); }
+}
+@keyframes badge-pop {
+    0%   { transform: translate(-50%,-50%) scale(0.5); opacity: 0; }
+    60%  { transform: translate(-50%,-50%) scale(1.25); }
+    100% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+}
+@keyframes badge-pulse-ring {
+    0%   { transform: translate(-50%,-50%) scale(1); opacity: .6; }
+    100% { transform: translate(-50%,-50%) scale(2.2); opacity: 0; }
+}
+
+#notifBtn.bell-ringing i[data-lucide="bell"] {
+    animation: bell-ring .7s cubic-bezier(.36,.07,.19,.97) both;
+    display: inline-block;
+    transform-origin: 50% 0%;
+}
+#notifCount {
+    font-size: .6rem !important;
+    min-width: 16px;
+    height: 16px;
+    line-height: 16px;
+    padding: 0 4px !important;
+    transition: none;
+}
+#notifCount.badge-new {
+    animation: badge-pop .35s cubic-bezier(.175,.885,.32,1.275) both;
+}
+#notifCount.badge-new::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: #ef4444;
+    animation: badge-pulse-ring .8s ease-out .1s both;
+    pointer-events: none;
+}
+
+/* Unread notification rows */
+#notifList .list-group-item.unread {
+    background: var(--ems-primary-soft, #eff6ff);
+    border-left: 3px solid var(--ems-primary, #2563eb);
+    padding-left: calc(.75rem - 3px);
+}
+#notifList .list-group-item {
+    border-radius: 0;
+    border-left: 3px solid transparent;
+}
+#notifList .notif-time {
+    font-size: .7rem;
+    color: var(--ems-text-secondary, #6b7280);
+    margin-top: 2px;
+}
+
+html[data-theme="dark"] #notifList .list-group-item.unread {
+    background: rgba(37,99,235,.12);
+}
