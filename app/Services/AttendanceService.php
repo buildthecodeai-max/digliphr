@@ -99,6 +99,19 @@ class AttendanceService
             $expectedWork = $this->calculateExpectedWorkMinutes($shift);
             $lateMinutes = $this->calculateLateMinutes($shift, $checkInAt, $isRemote);
 
+            // If the weekly pattern marks today as a half day, halve the expected
+            // work minutes and flag the status so no break is deducted at checkout.
+            $patternDayType = $this->resolvePatternDayType(
+                (int) $employee['company_id'],
+                (int) ($employee['designation_id'] ?? 0),
+                (int) ($employee['department_id'] ?? 0),
+                $attendanceDate
+            );
+            if ($patternDayType === 'half') {
+                $expectedWork = (int) floor($expectedWork / 2);
+                $status = 'half_day';
+            }
+
             $upload = $this->optionalImageUpload($payload);
             if ($upload !== null && empty($upload['success'])) {
                 $this->db->rollBack();
@@ -235,7 +248,8 @@ class AttendanceService
 
         $actualBreaks = $this->sumBreakMinutes((int) $active['id']);
         $shiftBreak   = (int) ($shift['break_minutes'] ?? 60);
-        $breakMinutes = $actualBreaks > 0 ? $actualBreaks : $shiftBreak;
+        // Always deduct at least the shift break (60 min); if actual break exceeds it, deduct the full actual amount.
+        $breakMinutes = max($actualBreaks, $shiftBreak);
         $workMinutes = max(0, (int) floor((strtotime($checkOutAt) - strtotime($checkInAt)) / 60) - $breakMinutes);
         $expectedWork = (int) ($active['expected_work_minutes'] ?? $this->calculateExpectedWorkMinutes($shift));
 
@@ -244,13 +258,11 @@ class AttendanceService
         $attendanceDate = (string) ($active['attendance_date'] ?? date('Y-m-d'));
         $checkoutDate = date('Y-m-d', strtotime($checkOutAt));
         if ($checkoutDate > $attendanceDate) {
-            $workMinutes = min($workMinutes, $expectedWork > 0 ? $expectedWork : 420);
+            $workMinutes = min($workMinutes, $expectedWork > 0 ? $expectedWork : 480);
         }
 
         $lateMinutes = (int) ($active['late_minutes'] ?? $this->calculateLateMinutes($shift, $checkInAt, $isRemote));
         $earlyLeave = $this->calculateEarlyLeaveMinutes($shift, $checkOutAt);
-        $overtime = $this->calculateOvertimeMinutes($shift, $workMinutes, $expectedWork);
-
         $status = $this->determineCheckOutStatus(
             (string) ($active['status'] ?? 'present'),
             $shift,
@@ -258,6 +270,27 @@ class AttendanceService
             $expectedWork,
             $isRemote
         );
+
+        // Also mark as half_day if the weekly schedule pattern says so for this date
+        if ($status !== 'half_day') {
+            $patternDayType = $this->resolvePatternDayType(
+                (int) $employee['company_id'],
+                (int) ($employee['designation_id'] ?? 0),
+                (int) ($employee['department_id'] ?? 0),
+                (string) ($active['attendance_date'] ?? date('Y-m-d'))
+            );
+            if ($patternDayType === 'half') {
+                $status = 'half_day';
+            }
+        }
+
+        // No break deduction on half days
+        if ($status === 'half_day') {
+            $workMinutes += $breakMinutes;
+            $breakMinutes = 0;
+        }
+
+        $overtime = $this->calculateOvertimeMinutes($shift, $workMinutes, $expectedWork);
 
         $verificationStatus = $this->determineVerificationStatus(
             $geo,
@@ -726,7 +759,7 @@ class AttendanceService
         }
 
         if (empty($shift['start_time']) || empty($shift['end_time'])) {
-            return 420;
+            return 480;
         }
 
         $start = strtotime('1970-01-01 ' . $shift['start_time']);
@@ -737,7 +770,7 @@ class AttendanceService
         }
 
         $minutes = (int) max(0, ($end - $start) / 60 - (int) ($shift['break_minutes'] ?? 0));
-        return $minutes > 0 ? $minutes : 420;
+        return $minutes > 0 ? $minutes : 480;
     }
 
     private function resolveAttendanceDate(array $shift, \DateTime $now): string
@@ -867,6 +900,67 @@ class AttendanceService
         } catch (\Throwable) {
             // Do not break attendance flow
         }
+    }
+
+    /**
+     * Returns 'full' | 'half' | 'off' for $date based on the employee's resolved
+     * weekly schedule pattern (designation manager-pattern > department pattern >
+     * company default > built-in Mon-Fri full / Sat half / Sun off).
+     */
+    private function resolvePatternDayType(int $companyId, int $designationId, int $departmentId, string $date): string
+    {
+        $dayColumns = [1 => 'monday_type', 2 => 'tuesday_type', 3 => 'wednesday_type',
+                       4 => 'thursday_type', 5 => 'friday_type', 6 => 'saturday_type', 7 => 'sunday_type'];
+        $iso = (int) date('N', strtotime($date));
+        $col = $dayColumns[$iso] ?? 'monday_type';
+
+        // Manager pattern: designation.is_manager_or_above = 1
+        if ($designationId > 0) {
+            $row = $this->db->fetch(
+                "SELECT p.{$col} AS day_type FROM designations dsg
+                 INNER JOIN attendance_week_patterns p
+                   ON p.company_id = dsg.company_id AND p.is_manager_pattern = 1 AND p.deleted_at IS NULL
+                 WHERE dsg.id = :did AND dsg.is_manager_or_above = 1 AND dsg.deleted_at IS NULL LIMIT 1",
+                ['did' => $designationId]
+            );
+            if ($row) {
+                return (string) ($row['day_type'] ?? 'full');
+            }
+        }
+
+        // Department pattern
+        if ($departmentId > 0) {
+            $row = $this->db->fetch(
+                "SELECT p.{$col} AS day_type FROM departments d
+                 INNER JOIN attendance_week_patterns p ON p.id = d.week_pattern_id AND p.deleted_at IS NULL
+                 WHERE d.id = :did AND d.deleted_at IS NULL LIMIT 1",
+                ['did' => $departmentId]
+            );
+            if ($row) {
+                return (string) ($row['day_type'] ?? 'full');
+            }
+        }
+
+        // Company default pattern
+        if ($companyId > 0) {
+            $row = $this->db->fetch(
+                "SELECT {$col} AS day_type FROM attendance_week_patterns
+                 WHERE company_id = :cid AND is_default = 1 AND deleted_at IS NULL LIMIT 1",
+                ['cid' => $companyId]
+            );
+            if ($row) {
+                return (string) ($row['day_type'] ?? 'full');
+            }
+        }
+
+        // Built-in fallback: Mon-Fri full, Sat half, Sun off
+        if ($iso === 7) {
+            return 'off';
+        }
+        if ($iso === 6) {
+            return 'half';
+        }
+        return 'full';
     }
 
     private function generateUuid(): string
@@ -1018,6 +1112,11 @@ class AttendanceService
             ? max(0, (int) $payload['break_minutes'])
             : max((int) ($record['break_minutes'] ?? 0), $shiftBreakDefault);
 
+        // No break on half days
+        if ($status === 'half_day') {
+            $breakMinutes = 0;
+        }
+
         $expectedWork = (int) ($record['expected_work_minutes'] ?? $this->calculateExpectedWorkMinutes($shift));
         $workMinutes = isset($payload['work_minutes']) && $payload['work_minutes'] !== ''
             ? max(0, (int) $payload['work_minutes'])
@@ -1040,7 +1139,7 @@ class AttendanceService
             // Cap if checkout is on a later calendar day than attendance_date (forgotten checkout corrected late)
             $attDate = (string) ($record['attendance_date'] ?? date('Y-m-d'));
             if (date('Y-m-d', strtotime($checkOut)) > $attDate) {
-                $rawWork = min($rawWork, $expectedWork > 0 ? $expectedWork : 420);
+                $rawWork = min($rawWork, $expectedWork > 0 ? $expectedWork : 480);
             }
             $workMinutes = $rawWork;
         }
@@ -1381,7 +1480,8 @@ class AttendanceService
         $shift = $this->shifts->find((int) ($record['shift_id'] ?? 0)) ?? [];
         $isRemote = (bool) ($record['is_remote'] ?? false);
 
-        $breakMinutes = (int) ($record['break_minutes'] ?? 0);
+        $shiftBreakAdj  = (int) ($shift['break_minutes'] ?? 60);
+        $breakMinutes   = max((int) ($record['break_minutes'] ?? 0), $shiftBreakAdj);
         $workMinutes = 0;
         $earlyLeave = 0;
         $overtime = 0;
@@ -1392,7 +1492,7 @@ class AttendanceService
             // Cap if checkout is on a later calendar day than attendance_date
             $attDate = (string) ($record['attendance_date'] ?? date('Y-m-d'));
             if (date('Y-m-d', strtotime($checkOut)) > $attDate) {
-                $workMinutes = min($workMinutes, $expectedWork > 0 ? $expectedWork : 420);
+                $workMinutes = min($workMinutes, $expectedWork > 0 ? $expectedWork : 480);
             }
             $earlyLeave = $this->calculateEarlyLeaveMinutes($shift, $checkOut);
             $overtime = $this->calculateOvertimeMinutes($shift, $workMinutes, $expectedWork);
@@ -1409,6 +1509,13 @@ class AttendanceService
                 (int) ($record['expected_work_minutes'] ?? $this->calculateExpectedWorkMinutes($shift)),
                 $isRemote
             );
+        }
+
+        // No break deduction on half days
+        if ($status === 'half_day' && $checkOut !== null) {
+            $workMinutes += $breakMinutes;
+            $breakMinutes = 0;
+            $overtime = $this->calculateOvertimeMinutes($shift, $workMinutes, $expectedWork ?? 480);
         }
 
         $update = [

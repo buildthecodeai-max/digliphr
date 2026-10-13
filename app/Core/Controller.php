@@ -55,6 +55,15 @@ abstract class Controller
         $this->response->redirect($referer);
     }
 
+    protected function safeBack(string $default): string
+    {
+        $back = (string) $this->request->input('_back', '');
+        if ($back && str_starts_with($back, '/admin/')) {
+            return $back;
+        }
+        return $default;
+    }
+
     protected function validate(array $rules, ?array $data = null): array
     {
         $validator = new Validator($data ?? $this->request->all(), $rules);

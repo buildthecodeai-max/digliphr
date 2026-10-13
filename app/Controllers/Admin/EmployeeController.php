@@ -49,6 +49,16 @@ class EmployeeController extends Controller
         $paginator = $this->employees->search(array_filter($filters), $page);
         $companyId = $filters['company_id'];
 
+        $db = $this->employees->db();
+        $cntScope = $this->tenant->sql('company_id', 'emp_status_cnt');
+        $statusCounts = [];
+        foreach (['active', 'probation', 'inactive', 'terminated'] as $s) {
+            $statusCounts[$s] = (int) $db->fetchColumn(
+                "SELECT COUNT(*) FROM employees WHERE deleted_at IS NULL AND employment_status = :s AND ({$cntScope['sql']})",
+                array_merge(['s' => $s], $cntScope['params'])
+            );
+        }
+
         $this->view('admin.employees.index', [
             'title' => 'Employees',
             'employees' => $paginator['data'],
@@ -58,6 +68,7 @@ class EmployeeController extends Controller
             'branches' => $companyId ? $this->branches->where(['company_id' => $companyId], 'name') : $this->branches->all('name'),
             'companies' => $this->tenant->companies(true),
             'savedFilters' => $companyId ? (new \App\Services\SavedFilterService())->forUser((int) $companyId, (int) $this->auth->id(), 'employees') : [],
+            'statusCounts' => $statusCounts,
         ]);
     }
 

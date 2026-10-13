@@ -47,7 +47,7 @@ class OvertimeController extends Controller
 
         (new AuditService())->log('approve', 'overtime', $id);
         flash('success', 'Overtime approved.');
-        $this->redirect('/admin/overtime');
+        $this->redirect($this->safeBack('/admin/overtime'));
     }
 
     public function destroy(int $id): void
@@ -84,6 +84,6 @@ class OvertimeController extends Controller
 
         (new AuditService())->log('reject', 'overtime', $id);
         flash('success', 'Overtime rejected.');
-        $this->redirect('/admin/overtime');
+        $this->redirect($this->safeBack('/admin/overtime'));
     }
 }

@@ -26,6 +26,7 @@ return [
                 'url' => '/admin/approvals',
                 'perm' => 'dashboard.view',
                 'accent' => 'orange',
+                'badge' => 'pending_leave',
                 'match' => ['/admin/approvals', '/admin/approval-chains'],
                 'children' => [
                     ['label' => 'Inbox', 'url' => '/admin/approvals', 'perm' => 'dashboard.view'],
@@ -60,6 +61,7 @@ return [
                 'url' => '/admin/attendance/overview',
                 'perm' => 'attendance.view',
                 'accent' => 'mint',
+                'badge' => 'pending_correction',
                 'match' => ['/admin/attendance', '/admin/shifts', '/admin/overtime', '/admin/holidays', '/admin/week-patterns'],
                 'exclude' => [],
                 'children' => [

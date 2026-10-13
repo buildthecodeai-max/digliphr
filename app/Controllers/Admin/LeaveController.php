@@ -61,6 +61,7 @@ class LeaveController extends Controller
             'filters' => $filters,
             'leaveTypes' => $companyId ? $this->leaveTypes->forCompany((int) $companyId) : $this->tenantLeaveTypes(),
             'savedFilters' => $companyId ? (new \App\Services\SavedFilterService())->forUser((int) $companyId, (int) $this->auth->id(), 'leave') : [],
+            'statusCounts' => $this->leaveStatusCounts(),
         ]);
     }
 
@@ -77,6 +78,11 @@ class LeaveController extends Controller
             throw new \App\Exceptions\HttpException('Leave request not found.', 404);
         }
 
+        $attachments = \App\Core\Database::getInstance()->fetchAll(
+            'SELECT * FROM leave_attachments WHERE leave_request_id = :id AND deleted_at IS NULL ORDER BY created_at ASC',
+            ['id' => $id]
+        );
+
         $this->view('admin.leave.show', [
             'title' => 'Leave Request #' . $id,
             'leaveRequest' => $request,
@@ -84,6 +90,7 @@ class LeaveController extends Controller
             'extensions' => $this->leaveRequests->getExtensions($id),
             'amendments' => can('leave.view_history') ? $this->leaveRequests->getAmendments($id) : [],
             'isArchived' => !empty($request['deleted_at']),
+            'attachments' => $attachments,
         ]);
     }
 
@@ -377,7 +384,22 @@ class LeaveController extends Controller
             'paginator' => $paginator,
             'filters' => $filters,
             'leaveTypes' => $filters['company_id'] ? $this->leaveTypes->forCompany((int) $filters['company_id']) : $this->tenantLeaveTypes(),
+            'statusCounts' => $this->leaveStatusCounts(),
         ]);
+    }
+
+    private function leaveStatusCounts(): array
+    {
+        $db = $this->leaveRequests->db();
+        $scope = $this->tenant->sql('company_id', 'leave_cnt');
+        $counts = [];
+        foreach (['pending', 'approved', 'rejected', 'cancelled'] as $s) {
+            $counts[$s] = (int) $db->fetchColumn(
+                "SELECT COUNT(*) FROM leave_requests WHERE deleted_at IS NULL AND status = :s AND ({$scope['sql']})",
+                array_merge(['s' => $s], $scope['params'])
+            );
+        }
+        return $counts;
     }
 
     public function approve(int $id): void
@@ -392,7 +414,7 @@ class LeaveController extends Controller
             flash('error', $e->getMessage());
         }
 
-        $this->redirect('/admin/leave/' . $id);
+        $this->redirect($this->safeBack('/admin/leave/' . $id));
     }
 
     public function reject(int $id): void
@@ -407,7 +429,7 @@ class LeaveController extends Controller
             flash('error', $e->getMessage());
         }
 
-        $this->redirect('/admin/leave/' . $id);
+        $this->redirect($this->safeBack('/admin/leave/' . $id));
     }
 
     public function extend(int $id): void

@@ -136,7 +136,19 @@ $router->group(['prefix' => '/api'], function ($router) use ($app) {
                 $n = (int) $db->fetchColumn("SELECT COUNT(*) FROM payroll_periods WHERE status IN ('draft','processing','calculated') AND deleted_at IS NULL AND (" . $s['sql'] . ')', $s['params']);
                 if ($n) $items[] = ['type' => 'payroll', 'icon' => 'banknote', 'color' => '#16a34a', 'title' => $n . ' payroll period' . ($n !== 1 ? 's' : '') . ' need processing', 'sub' => 'Review payroll module', 'url' => '/admin/payroll'];
             } catch (\Throwable $e) {}
-            $response->success('Smart notifications.', ['items' => $items]);
+            $badgeCounts = ['pending_leave' => 0, 'pending_correction' => 0];
+            try {
+                $s = $tenant->sql('company_id', 'sn_badge_leave');
+                $badgeCounts['pending_leave'] = (int) $db->fetchColumn("SELECT COUNT(*) FROM leave_requests WHERE status = 'pending' AND deleted_at IS NULL AND (" . $s['sql'] . ')', $s['params']);
+            } catch (\Throwable $e) {}
+            try {
+                $s2 = $tenant->sql('e.company_id', 'sn_badge_corr');
+                $badgeCounts['pending_correction'] = (int) $db->fetchColumn(
+                    'SELECT COUNT(*) FROM attendance_corrections ac INNER JOIN employees e ON e.id = ac.employee_id WHERE ac.status = \'pending\' AND ac.deleted_at IS NULL AND (' . $s2['sql'] . ')',
+                    $s2['params']
+                );
+            } catch (\Throwable $e) {}
+            $response->success('Smart notifications.', ['items' => $items, 'badge_counts' => $badgeCounts]);
         });
 
         $router->get('/dashboard/stats', ['Admin\\DashboardController', 'stats']);

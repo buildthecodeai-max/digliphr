@@ -48,6 +48,10 @@ $navGroups = [
                     <span class="sidebar-label"><?= e($item['label']) ?></span>
                     <?php if ($badge === 'chat_unread'): ?>
                         <span class="sidebar-badge d-none" data-chat-unread-badge aria-hidden="true">0</span>
+                    <?php elseif ($badge === 'pending_leave'): ?>
+                        <span class="sidebar-badge d-none" data-pending-leave-badge aria-hidden="true">0</span>
+                    <?php elseif ($badge === 'pending_correction'): ?>
+                        <span class="sidebar-badge d-none" data-pending-correction-badge aria-hidden="true">0</span>
                     <?php endif; ?>
                 </a>
             <?php endforeach; ?>

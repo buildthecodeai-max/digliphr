@@ -27,6 +27,26 @@
             </div>
         </div>
 
+        <?php if (!empty($attachments)): ?>
+        <div class="card ems-card mt-3">
+            <div class="card-header">Attached Documents</div>
+            <ul class="list-group list-group-flush">
+                <?php foreach ($attachments as $att): ?>
+                    <li class="list-group-item d-flex align-items-center gap-2 py-2">
+                        <i data-lucide="paperclip" style="width:14px;height:14px;flex-shrink:0"></i>
+                        <span class="small text-truncate flex-grow-1"><?= e($att['original_filename'] ?? $att['filename']) ?></span>
+                        <a href="/files/leave-attachment/<?= (int) $att['id'] ?>?download=1" class="btn btn-xs btn-soft btn-sm" style="white-space:nowrap">
+                            <i data-lucide="download" style="width:12px;height:12px"></i> Download
+                        </a>
+                        <a href="/files/leave-attachment/<?= (int) $att['id'] ?>" target="_blank" class="btn btn-xs btn-soft btn-sm" style="white-space:nowrap">
+                            <i data-lucide="eye" style="width:12px;height:12px"></i> View
+                        </a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
+
         <?php if (!empty($approvals)): ?>
         <div class="card ems-card mt-3">
             <div class="card-header">Manager Comments</div>

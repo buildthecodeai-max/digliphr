@@ -102,6 +102,32 @@ class AttendanceController extends Controller
             }
 
             Session::flash($result['success'] ? 'success' : 'error', $result['message']);
+
+            if ($result['success']) {
+                try {
+                    $db = $this->attendance->db();
+                    $admins = $db->fetchAll(
+                        'SELECT u.id FROM users u
+                         INNER JOIN user_roles ur ON ur.user_id = u.id
+                         INNER JOIN roles r ON r.id = ur.role_id
+                         WHERE r.slug IN ("hr_manager","company_admin","super_admin")
+                           AND (ur.company_id = :cid OR r.slug = "super_admin")
+                           AND u.is_active = 1 AND u.deleted_at IS NULL',
+                        ['cid' => (int) $employee['company_id']]
+                    );
+                    if (!empty($admins)) {
+                        $empName = trim(($employee['first_name'] ?? '') . ' ' . ($employee['last_name'] ?? ''));
+                        (new \App\Services\NotificationService())->notifyMany(
+                            array_column($admins, 'id'),
+                            'New Correction Request',
+                            $empName . ' has submitted an attendance correction.',
+                            '/admin/attendance/corrections',
+                            'attendance'
+                        );
+                    }
+                } catch (\Throwable $e) {}
+            }
+
             $this->redirect('/employee/attendance/corrections');
         }
 

@@ -126,7 +126,7 @@ class LeaveService
         );
 
         $available = (float) $balance['closing_balance'];
-        if (!(int) $leaveType['allow_negative_balance'] && $available < $days['chargeable_days']) {
+        if ((int) $leaveType['is_paid'] && !(int) $leaveType['allow_negative_balance'] && $available < $days['chargeable_days']) {
             throw new RuntimeException('Insufficient leave balance.');
         }
 
@@ -169,6 +169,40 @@ class LeaveService
 
             (new AuditService())->log('create', 'leave', $requestId, null, $data, $userId);
             $this->db->commit();
+
+            // Notify approvers (or HR admins) about the new leave request
+            try {
+                $notifyIds = [];
+                if ((int) $leaveType['requires_approval']) {
+                    $rows = $this->db->fetchAll(
+                        'SELECT approver_id FROM leave_approvals WHERE leave_request_id = :id AND status = :s ORDER BY level ASC',
+                        ['id' => $requestId, 's' => 'pending']
+                    );
+                    $notifyIds = array_column($rows, 'approver_id');
+                }
+                if (empty($notifyIds)) {
+                    $admins = $this->db->fetchAll(
+                        'SELECT u.id FROM users u
+                         INNER JOIN user_roles ur ON ur.user_id = u.id
+                         INNER JOIN roles r ON r.id = ur.role_id
+                         WHERE r.slug IN ("hr_manager","company_admin","super_admin")
+                           AND (ur.company_id = :cid OR r.slug = "super_admin")
+                           AND u.is_active = 1 AND u.deleted_at IS NULL',
+                        ['cid' => (int) $employee['company_id']]
+                    );
+                    $notifyIds = array_column($admins, 'id');
+                }
+                if (!empty($notifyIds)) {
+                    $empName = trim(($employee['first_name'] ?? '') . ' ' . ($employee['last_name'] ?? ''));
+                    (new \App\Services\NotificationService())->notifyMany(
+                        $notifyIds,
+                        'New Leave Request',
+                        $empName . ' has submitted a leave request.',
+                        '/admin/leave/' . $requestId,
+                        'leave'
+                    );
+                }
+            } catch (\Throwable $e) {}
 
             return $requestId;
         } catch (\Throwable $e) {
@@ -347,7 +381,9 @@ class LeaveService
             $year
         );
 
-        if (!(int) ($this->leaveTypes->find((int) $request['leave_type_id'])['allow_negative_balance'] ?? 0)
+        $extLeaveType = $this->leaveTypes->find((int) $request['leave_type_id']) ?? [];
+        if ((int) ($extLeaveType['is_paid'] ?? 1)
+            && !(int) ($extLeaveType['allow_negative_balance'] ?? 0)
             && (float) $balance['closing_balance'] < $extraDays['chargeable_days']) {
             throw new RuntimeException('Insufficient leave balance for extension.');
         }
@@ -755,7 +791,7 @@ class LeaveService
         );
 
         $available = (float) $balance['closing_balance'];
-        if (!(int) $leaveType['allow_negative_balance'] && $available < $days['chargeable_days']) {
+        if ((int) $leaveType['is_paid'] && !(int) $leaveType['allow_negative_balance'] && $available < $days['chargeable_days']) {
             throw new RuntimeException('Insufficient leave balance (' . number_format($available, 1) . ' days remaining).');
         }
 

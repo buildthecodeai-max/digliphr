@@ -200,7 +200,9 @@ class ReportService
                 ROUND(AVG(NULLIF(a.work_minutes, 0)), 0) AS avg_work_minutes,
                 ROUND(AVG(a.overtime_minutes), 0) AS avg_overtime_minutes,
                 SUM(a.overtime_minutes) AS total_overtime_minutes,
-                SUM(CASE WHEN a.work_minutes > 0 AND a.work_minutes < 420 THEN 420 - a.work_minutes ELSE 0 END) AS missing_minutes
+                SUM(CASE WHEN a.work_minutes > 0 AND a.work_minutes < a.expected_work_minutes
+                         THEN a.expected_work_minutes - a.work_minutes ELSE 0 END) AS missing_minutes,
+                ROUND(AVG(NULLIF(a.expected_work_minutes, 0)), 0) AS avg_required_minutes
              FROM attendance a
              INNER JOIN employees e ON e.id = a.employee_id
              WHERE {$where}",
@@ -209,7 +211,7 @@ class ReportService
 
         return [
             'avg_work_minutes' => (int) ($row['avg_work_minutes'] ?? 0),
-            'required_minutes' => 480,
+            'required_minutes' => (int) ($row['avg_required_minutes'] ?? 480),
             'avg_overtime_minutes' => (int) ($row['avg_overtime_minutes'] ?? 0),
             'total_overtime_minutes' => (int) ($row['total_overtime_minutes'] ?? 0),
             'missing_minutes' => (int) ($row['missing_minutes'] ?? 0),

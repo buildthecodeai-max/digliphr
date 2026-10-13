@@ -90,6 +90,7 @@ class LeaveController extends Controller
 
         try {
             $id = $this->leaveService->submitRequest($data, (int) $this->user()['id']);
+            $this->saveLeaveAttachment($id, (int) $this->user()['id']);
             flash('success', 'Leave request submitted successfully.');
             $this->redirect('/employee/leave/' . $id);
         } catch (RuntimeException $e) {
@@ -110,10 +111,17 @@ class LeaveController extends Controller
             throw new \App\Exceptions\HttpException('Leave request not found.', 404);
         }
 
+        $db = \App\Core\Database::getInstance();
+        $attachments = $db->fetchAll(
+            'SELECT * FROM leave_attachments WHERE leave_request_id = :id AND deleted_at IS NULL ORDER BY created_at ASC',
+            ['id' => $id]
+        );
+
         $this->view('employee.leave.show', [
             'title' => 'Leave Request #' . $id,
             'leaveRequest' => $request,
             'approvals' => $this->leaveRequests->getApprovals($id),
+            'attachments' => $attachments,
         ], 'layouts/employee');
     }
 
@@ -137,5 +145,51 @@ class LeaveController extends Controller
         }
 
         $this->redirect('/employee/leave/' . $id);
+    }
+
+    private function saveLeaveAttachment(int $leaveRequestId, int $userId): void
+    {
+        $file = $_FILES['leave_attachment'] ?? null;
+        if (!$file || empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            return;
+        }
+
+        $allowedMimes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/png',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime  = (string) $finfo->file($file['tmp_name']);
+        $maxSize = (int) (config('app.upload_max_size') ?? 5242880);
+
+        if (!in_array($mime, $allowedMimes, true) || (int) $file['size'] > $maxSize) {
+            return;
+        }
+
+        $ext    = strtolower((string) pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
+        $stored = 'lva_' . $leaveRequestId . '_' . bin2hex(random_bytes(8)) . ($ext ? '.' . $ext : '');
+        $destDir = (string) config('app.paths.leave_attachments');
+
+        if (!is_dir($destDir)) {
+            mkdir($destDir, 0775, true);
+        }
+
+        if (move_uploaded_file($file['tmp_name'], $destDir . '/' . $stored)) {
+            \App\Core\Database::getInstance()->insert('leave_attachments', [
+                'leave_request_id' => $leaveRequestId,
+                'filename'         => $stored,
+                'original_filename'=> (string) ($file['name'] ?? $stored),
+                'path'             => $stored,
+                'mime_type'        => $mime,
+                'file_size'        => (int) $file['size'],
+                'uploaded_by'      => $userId,
+                'created_at'       => date('Y-m-d H:i:s'),
+                'updated_at'       => date('Y-m-d H:i:s'),
+            ]);
+        }
     }
 }

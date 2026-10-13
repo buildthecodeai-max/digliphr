@@ -142,30 +142,45 @@ class TimeclockController extends Controller
                         ['n' => $now, 'dm' => $sessDur, 'n2' => $now, 'id' => $openSess['id']]
                     );
                 }
+                // Load shift row early (needed for break default and overtime threshold).
+                $shiftRow = $att['shift_id']
+                    ? ($this->db->fetch('SELECT * FROM shifts WHERE id=:id LIMIT 1', ['id' => (int) $att['shift_id']]) ?? [])
+                    : [];
+
                 // Totals from all sessions minus breaks
                 $totalSessMins = (int) $this->db->fetchColumn(
                     'SELECT COALESCE(SUM(duration_minutes),0) FROM attendance_sessions WHERE attendance_id=:id',
                     ['id' => $attId]
                 );
-                $breakMins = $this->sumBreaks($attId);
+                $actualBreakMins = $this->sumBreaks($attId);
+                // Always deduct at least the shift break (60 min); extra break time beyond that is also deducted.
+                $shiftBreakMins = (int) ($shiftRow['break_minutes'] ?? 60);
+                $breakMins = max($actualBreakMins, $shiftBreakMins);
                 $workMins  = max(0, $totalSessMins - $breakMins);
 
                 // Cap work_minutes when checkout is on a later date than attendance_date
                 // (forgotten checkout being fixed the next day) — prevents fabricated overtime.
                 $attDate = (string) ($att['attendance_date'] ?? $today);
                 if ($today > $attDate) {
-                    $expectedMins = (int) ($att['expected_work_minutes'] ?? 420);
-                    $workMins = min($workMins, $expectedMins > 0 ? $expectedMins : 420);
+                    $expectedMins = (int) ($att['expected_work_minutes'] ?? 480);
+                    $workMins = min($workMins, $expectedMins > 0 ? $expectedMins : 480);
                 }
 
                 // Calculate overtime_minutes so the attendance record is fully consistent.
-                $shiftRow = $att['shift_id']
-                    ? ($this->db->fetch('SELECT * FROM shifts WHERE id=:id LIMIT 1', ['id' => (int) $att['shift_id']]) ?? [])
-                    : [];
-                $expectedForOt = (int) ($att['expected_work_minutes'] ?? (int) ($shiftRow['expected_work_minutes'] ?? 420));
+                $expectedForOt = (int) ($att['expected_work_minutes'] ?? (int) ($shiftRow['expected_work_minutes'] ?? 480));
                 $otThreshold   = (int) ($shiftRow['overtime_after_minutes'] ?? 0);
                 $baseline      = $expectedForOt + $otThreshold;
                 $overtimeMins  = $workMins > $baseline ? $workMins - $baseline : 0;
+
+                // No break deduction on half days
+                $currentStatus = (string) ($att['status'] ?? 'present');
+                $isHalfDay = $currentStatus === 'half_day'
+                    || ($expectedForOt > 0 && $workMins < (int) floor($expectedForOt / 2));
+                if ($isHalfDay) {
+                    $workMins  += $breakMins;
+                    $breakMins  = 0;
+                    $overtimeMins = 0;
+                }
 
                 $this->db->query(
                     'UPDATE attendance SET check_out_at=:co, work_minutes=:wm, overtime_minutes=:ot, break_minutes=:bm, updated_at=NOW() WHERE id=:id',

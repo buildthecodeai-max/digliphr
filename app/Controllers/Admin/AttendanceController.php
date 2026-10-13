@@ -255,13 +255,15 @@ class AttendanceController extends Controller
         }
         $where = implode(' AND ', $clauses);
 
-        $total = (int) $this->attendance->db()->fetchColumn(
+        $db = $this->attendance->db();
+        $total = (int) $db->fetchColumn(
             "SELECT COUNT(*) FROM attendance_corrections ac
              INNER JOIN attendance a ON a.id = ac.attendance_id WHERE {$where}",
             $params
         );
-        $rows = $this->attendance->db()->fetchAll(
+        $rows = $db->fetchAll(
             "SELECT ac.*, a.attendance_date, a.status AS attendance_status,
+                    a.check_in_at AS original_check_in_at, a.check_out_at AS original_check_out_at,
                     CONCAT(e.first_name, ' ', e.last_name) AS employee_name, e.employee_code
              FROM attendance_corrections ac
              INNER JOIN attendance a ON a.id = ac.attendance_id
@@ -271,6 +273,18 @@ class AttendanceController extends Controller
              LIMIT {$perPage} OFFSET {$offset}",
             $params
         );
+
+        // Status counts for stat tiles (scoped to company, ignoring current status filter)
+        $scopeOnly = $scope['sql'];
+        $statusCounts = [];
+        foreach (['pending', 'approved', 'rejected'] as $s) {
+            $statusCounts[$s] = (int) $db->fetchColumn(
+                "SELECT COUNT(*) FROM attendance_corrections ac
+                 INNER JOIN attendance a ON a.id = ac.attendance_id
+                 WHERE ac.deleted_at IS NULL AND ac.status = :s AND ({$scopeOnly})",
+                array_merge(['s' => $s], $scope['params'])
+            );
+        }
 
         $this->view('admin/attendance/corrections', [
             'title' => 'Correction Requests',
@@ -282,6 +296,7 @@ class AttendanceController extends Controller
                 'last_page' => max(1, (int) ceil($total / $perPage)),
             ],
             'filters' => ['status' => $status],
+            'statusCounts' => $statusCounts,
         ]);
     }
 
@@ -314,7 +329,7 @@ class AttendanceController extends Controller
         } else {
             flash('error', $result['message'] ?? 'Failed to apply correction.');
         }
-        $this->redirect('/admin/attendance/corrections');
+        $this->redirect($this->safeBack('/admin/attendance/corrections'));
     }
 
     public function rejectCorrection(int $id): void
@@ -333,7 +348,7 @@ class AttendanceController extends Controller
             'review_notes' => (string) $this->request->input('review_notes', 'Rejected'),
         ], 'id = :id', ['id' => $id]);
         flash('success', 'Correction request rejected.');
-        $this->redirect('/admin/attendance/corrections');
+        $this->redirect($this->safeBack('/admin/attendance/corrections'));
     }
 
     public function deleteCorrection(int $id): void

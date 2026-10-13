@@ -127,6 +127,23 @@ class FileController extends Controller
                 (new AuditService())->log('view', 'chat_attachments', (int) $id);
                 break;
 
+            case 'leave-attachment':
+                $row = $db->fetch('SELECT * FROM leave_attachments WHERE id = :id AND deleted_at IS NULL', ['id' => $id]);
+                if (!$row) {
+                    throw new HttpException('File not found.', 404);
+                }
+                $lr = $db->fetch('SELECT employee_id FROM leave_requests WHERE id = :id', ['id' => $row['leave_request_id']]);
+                $employee = $this->employee();
+                $canManage = $this->auth->can('leave.view');
+                $isOwner = $employee && $lr && (int) $employee['id'] === (int) $lr['employee_id'];
+                if (!$canManage && !$isOwner) {
+                    throw new HttpException('Forbidden.', 403);
+                }
+                $path = config('app.paths.leave_attachments') . '/' . ltrim((string) ($row['path'] ?? $row['filename']), '/');
+                $mime = $row['mime_type'] ?? 'application/octet-stream';
+                $filename = $row['original_filename'] ?? $row['filename'] ?? 'attachment';
+                break;
+
             case 'monitoring-screenshot':
                 $row = $db->fetch(
                     'SELECT * FROM monitoring_screenshots WHERE id = :id AND deleted_at IS NULL',

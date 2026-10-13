@@ -63,6 +63,16 @@
                             <label class="form-label" for="emergency_contact">Emergency Contact</label>
                             <input type="text" name="emergency_contact" class="form-control form-control-sm" value="<?= e((string) old('emergency_contact')) ?>" id="emergency_contact">
                         </div>
+                        <div class="col-12">
+                            <label class="form-label" for="leave_attachment">Supporting Document <span class="text-muted small">(optional &mdash; PDF, JPG, PNG, DOC, max 5 MB)</span></label>
+                            <input type="file" name="leave_attachment" class="form-control form-control-sm" id="leave_attachment"
+                                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                        </div>
+                    </div>
+
+                    <div id="unpaid-leave-alert" class="alert alert-warning d-flex align-items-start gap-2 mt-3 mb-0" style="display:none!important">
+                        <i data-lucide="alert-triangle" style="width:16px;height:16px;flex-shrink:0;margin-top:2px"></i>
+                        <span>Your paid leave balance is exhausted. You are applying for an <strong>unpaid leave</strong>.</span>
                     </div>
 
                     <?php if (!empty($balances)): ?>
@@ -79,6 +89,39 @@
                         <a href="/employee/leave" class="btn btn-soft btn-sm">Cancel</a>
                     </div>
                 </form>
+
+<?php
+// Build JS data: balance per leave_type_id, is_paid per leave_type_id
+$_balanceMap = [];
+foreach ($balances as $_b) {
+    $_balanceMap[(int) $_b['leave_type_id']] = (float) $_b['closing_balance'];
+}
+$_paidMap = [];
+foreach ($leaveTypes as $_lt) {
+    $_paidMap[(int) $_lt['id']] = (int) (!empty($_lt['is_paid']));
+}
+?>
+<script>
+(function () {
+    var balances = <?= json_encode($_balanceMap) ?>;
+    var isPaid   = <?= json_encode($_paidMap) ?>;
+    var alert    = document.getElementById('unpaid-leave-alert');
+
+    function checkBalance() {
+        var id  = parseInt(document.getElementById('leave_type_id').value, 10);
+        var bal = (id && balances.hasOwnProperty(id)) ? balances[id] : null;
+        var paid = id ? (isPaid[id] || 0) : 0;
+        if (paid && bal !== null && bal <= 0) {
+            alert.style.removeProperty('display');
+        } else {
+            alert.style.display = 'none';
+        }
+    }
+
+    document.getElementById('leave_type_id').addEventListener('change', checkBalance);
+    checkBalance();
+})();
+</script>
             </div>
         </div>
     </div>

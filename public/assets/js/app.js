@@ -370,6 +370,34 @@
         if (window.lucide) lucide.createIcons({ nodes: [list] });
     }
 
+    var _prevBadgeCounts = {};
+    function _updateSidebarBadges(counts) {
+        var selectors = {
+            'pending_leave': '[data-pending-leave-badge]',
+            'pending_correction': '[data-pending-correction-badge]'
+        };
+        var anyNew = false;
+        Object.keys(selectors).forEach(function (key) {
+            var n = counts[key] || 0;
+            var prev = _prevBadgeCounts[key] !== undefined ? _prevBadgeCounts[key] : -1;
+            if (prev >= 0 && n > prev) anyNew = true;
+            _prevBadgeCounts[key] = n;
+            document.querySelectorAll(selectors[key]).forEach(function (el) {
+                if (n > 0) {
+                    el.textContent = n > 99 ? '99+' : String(n);
+                    el.classList.remove('d-none');
+                } else {
+                    el.classList.add('d-none');
+                }
+            });
+        });
+        if (anyNew) {
+            var btn = document.getElementById('notifBtn');
+            var countEl = document.getElementById('notifCount');
+            _ringBell(btn, countEl, true);
+        }
+    }
+
     function refreshNotifications() {
         var list = document.getElementById('notifList');
         var count = document.getElementById('notifCount');
@@ -383,6 +411,8 @@
             var smartRes  = results[1];
             var payload   = notifRes ? (notifRes.data || []) : [];
             var smartItems = (smartRes && smartRes.data && Array.isArray(smartRes.data.items)) ? smartRes.data.items : [];
+            var badgeCounts = (smartRes && smartRes.data && smartRes.data.badge_counts) ? smartRes.data.badge_counts : {};
+            _updateSidebarBadges(badgeCounts);
             if (list) {
                 renderNotificationRows(list, count, payload, smartItems);
             } else if (count) {
