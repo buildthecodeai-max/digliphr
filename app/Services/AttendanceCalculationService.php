@@ -427,6 +427,7 @@ class AttendanceCalculationService
                 SUM(CASE WHEN hol.id IS NULL AND lr.id IS NULL AND cal.d < :today1
                     THEN ({$dayWeight}) ELSE 0 END) AS absent_days,
                 SUM(CASE WHEN hol.id IS NULL AND lr.id IS NULL AND cal.d = :today2 AND ({$dayWeight}) > 0
+                         AND (emp_shift.id IS NULL OR TIME(NOW()) >= emp_shift.start_time)
                     THEN 1 ELSE 0 END) AS pending_today_days,
                 SUM(CASE WHEN hol.id IS NULL AND cal.d <= :today3
                     THEN ({$dayWeight}) ELSE 0 END) AS scheduled_working_days,
@@ -442,6 +443,7 @@ class AttendanceCalculationService
             LEFT JOIN leave_requests lr ON lr.employee_id = e.id AND lr.status = 'approved'
                 AND cal.d BETWEEN lr.start_date AND lr.end_date AND lr.deleted_at IS NULL
             LEFT JOIN leave_types lt ON lt.id = lr.leave_type_id
+            LEFT JOIN shifts emp_shift ON emp_shift.id = e.shift_id AND emp_shift.deleted_at IS NULL
             WHERE e.id IN ({$idPlaceholders})
               AND a.id IS NULL
               AND cal.d >= e.joining_date
@@ -676,6 +678,14 @@ class AttendanceCalculationService
             $dayWeight = match ($dayType) { 'full' => 1.0, 'half' => 0.5, default => 0.0 };
             $isWorking = $dayType !== 'off';
             $classification = $this->classifyDay($row, $leaveToday, $holidayToday, $isWorking, $date, $today);
+
+            // For PM / overnight shifts that haven't started yet today, show
+            // Scheduled rather than Not Checked In / Missing Attendance.
+            if (!$row && $date === $today && $classification['category'] === 'missing_attendance'
+                && !empty($shift['start_time'])
+                && time() < strtotime($today . ' ' . $shift['start_time'])) {
+                $classification = ['label' => 'Scheduled', 'category' => 'scheduled', 'is_half' => false];
+            }
 
             // When the attendance record had no shift_id at check-in time (shift was
             // unresolved), late_minutes was stored as 0 and status as 'present'.
