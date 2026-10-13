@@ -382,16 +382,66 @@ class ReportController extends Controller
         [$where, $params] = $this->attendanceScopedWhere($filters, $scope);
         $rows = $this->db()->fetchAll(
             "SELECT e.id AS employee_id, e.employee_code, CONCAT(e.first_name,' ',e.last_name) AS employee_name,
-                    d.name AS department_name, b.name AS branch_name, s.name AS shift_name,
-                    a.attendance_date, a.status, s.start_time AS scheduled_in, a.check_in_at, a.late_minutes,
-                    s.grace_minutes, GREATEST(0, a.late_minutes - COALESCE(s.grace_minutes,0)) AS effective_late_minutes
+                    d.name AS department_name, b.name AS branch_name,
+                    COALESCE(s.name, def_s.name) AS shift_name,
+                    a.attendance_date, a.status,
+                    COALESCE(s.start_time, def_s.start_time) AS scheduled_in,
+                    a.check_in_at,
+                    CASE
+                        WHEN a.late_minutes > 0 THEN a.late_minutes
+                        WHEN a.shift_id IS NULL AND def_s.start_time IS NOT NULL AND a.check_in_at IS NOT NULL
+                        THEN GREATEST(0, CAST(
+                            TIME_TO_SEC(TIMEDIFF(
+                                CASE WHEN def_s.is_overnight = 1 AND TIME(a.check_in_at) < def_s.start_time
+                                     THEN ADDTIME(TIME(a.check_in_at), '24:00:00')
+                                     ELSE TIME(a.check_in_at)
+                                END,
+                                def_s.start_time
+                            )) / 60 AS SIGNED
+                        ))
+                        ELSE 0
+                    END AS late_minutes,
+                    COALESCE(s.grace_minutes, def_s.grace_minutes, 0) AS grace_minutes,
+                    GREATEST(0,
+                        CASE
+                            WHEN a.late_minutes > 0 THEN a.late_minutes
+                            WHEN a.shift_id IS NULL AND def_s.start_time IS NOT NULL AND a.check_in_at IS NOT NULL
+                            THEN GREATEST(0, CAST(
+                                TIME_TO_SEC(TIMEDIFF(
+                                    CASE WHEN def_s.is_overnight = 1 AND TIME(a.check_in_at) < def_s.start_time
+                                         THEN ADDTIME(TIME(a.check_in_at), '24:00:00')
+                                         ELSE TIME(a.check_in_at)
+                                    END,
+                                    def_s.start_time
+                                )) / 60 AS SIGNED
+                            ))
+                            ELSE 0
+                        END
+                        - COALESCE(s.grace_minutes, def_s.grace_minutes, 0)
+                    ) AS effective_late_minutes
              FROM attendance a
              INNER JOIN employees e ON e.id = a.employee_id
              LEFT JOIN departments d ON d.id = e.department_id
              LEFT JOIN branches b ON b.id = e.branch_id
              LEFT JOIN shifts s ON s.id = a.shift_id
-             WHERE a.status IN ('late','half_day','missing_checkout') AND a.late_minutes > 0 AND {$where}
-             ORDER BY a.attendance_date DESC, a.late_minutes DESC",
+             LEFT JOIN shifts def_s ON def_s.id = e.shift_id AND a.shift_id IS NULL AND def_s.deleted_at IS NULL
+             WHERE (
+                 (a.status IN ('late','half_day','missing_checkout') AND a.late_minutes > 0)
+                 OR (
+                     a.shift_id IS NULL
+                     AND a.check_in_at IS NOT NULL
+                     AND a.status NOT IN ('on_leave','holiday','weekend','absent')
+                     AND def_s.start_time IS NOT NULL
+                     AND TIME_TO_SEC(TIMEDIFF(
+                         CASE WHEN def_s.is_overnight = 1 AND TIME(a.check_in_at) < def_s.start_time
+                              THEN ADDTIME(TIME(a.check_in_at), '24:00:00')
+                              ELSE TIME(a.check_in_at)
+                         END,
+                         def_s.start_time
+                     )) > COALESCE(def_s.grace_minutes, 0) * 60
+                 )
+             ) AND {$where}
+             ORDER BY a.attendance_date DESC, late_minutes DESC",
             $params
         );
 

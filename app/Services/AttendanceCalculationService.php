@@ -587,7 +587,8 @@ class AttendanceCalculationService
         }
 
         $attendanceRows = $this->db->fetchAll(
-            "SELECT a.*, s.name AS shift_name, s.start_time AS shift_start, s.end_time AS shift_end
+            "SELECT a.*, s.name AS shift_name, s.start_time AS shift_start, s.end_time AS shift_end,
+                    s.grace_minutes AS shift_grace, s.is_overnight AS shift_is_overnight
              FROM attendance a
              LEFT JOIN shifts s ON s.id = a.shift_id
              WHERE a.employee_id = :eid AND a.attendance_date BETWEEN :from AND :to AND a.deleted_at IS NULL",
@@ -644,10 +645,17 @@ class AttendanceCalculationService
             }
 
             $row = $byDate[$date] ?? null;
-            $shift = $row ? [
-                'start_time' => $row['shift_start'] ?? null,
-                'end_time' => $row['shift_end'] ?? null,
-            ] : ($shiftModel->findForEmployee($employeeId, $date) ?? []);
+            if ($row && !empty($row['shift_start'])) {
+                $shift = [
+                    'start_time'    => $row['shift_start'],
+                    'end_time'      => $row['shift_end'] ?? null,
+                    'name'          => $row['shift_name'] ?? null,
+                    'grace_minutes' => (int) ($row['shift_grace'] ?? 0),
+                    'is_overnight'  => (bool) ($row['shift_is_overnight'] ?? false),
+                ];
+            } else {
+                $shift = $shiftModel->findForEmployee($employeeId, $date) ?? [];
+            }
 
             $leaveToday = null;
             foreach ($leaveRows as $lr) {
@@ -669,6 +677,20 @@ class AttendanceCalculationService
             $isWorking = $dayType !== 'off';
             $classification = $this->classifyDay($row, $leaveToday, $holidayToday, $isWorking, $date, $today);
 
+            // When the attendance record had no shift_id at check-in time (shift was
+            // unresolved), late_minutes was stored as 0 and status as 'present'.
+            // If we can now resolve a shift via fallback, recompute lateness for display.
+            $displayLate = (int) ($row['late_minutes'] ?? 0);
+            if ($row && $displayLate === 0 && empty($row['shift_start'])
+                && !empty($shift['start_time']) && !empty($row['check_in_at'])
+                && $classification['category'] === 'present') {
+                $computed = $this->recomputeLateMinutes($shift, (string) $row['check_in_at']);
+                if ($computed > 0) {
+                    $displayLate = $computed;
+                    $classification = ['label' => 'Late', 'category' => 'late', 'is_half' => false];
+                }
+            }
+
             $hasPendingCorrection = !empty($row['id']) && isset($pendingByAttendanceId[(int) $row['id']]);
             if ($hasPendingCorrection) {
                 // Flag for display only — keep the original category so
@@ -687,14 +709,14 @@ class AttendanceCalculationService
                 'date' => $date,
                 'day_name' => date('D', $cursor),
                 'is_scheduled_working_day' => $isWorking,
-                'shift_name' => $row['shift_name'] ?? ($shift['name'] ?? null),
+                'shift_name' => (!empty($row['shift_name']) ? $row['shift_name'] : null) ?? ($shift['name'] ?? null),
                 'scheduled_in' => $shift['start_time'] ?? null,
                 'scheduled_out' => $shift['end_time'] ?? null,
                 'check_in_at' => $row['check_in_at'] ?? null,
                 'check_out_at' => $row['check_out_at'] ?? null,
                 'status' => $classification['category'],
                 'status_label' => $classification['label'],
-                'late_minutes' => (int) ($row['late_minutes'] ?? 0),
+                'late_minutes' => $displayLate,
                 'early_leave_minutes' => (int) ($row['early_leave_minutes'] ?? 0),
                 'worked_minutes' => $worked,
                 'overtime_minutes' => $overtime,
@@ -786,6 +808,27 @@ class AttendanceCalculationService
             ? round(($summary['present_days'] / $summary['scheduled_working_days']) * 100, 1) : 0.0;
 
         return ['employee' => $employee, 'days' => $days, 'summary' => $summary];
+    }
+
+    private function recomputeLateMinutes(array $shift, string $checkInAt): int
+    {
+        if (empty($shift['start_time'])) {
+            return 0;
+        }
+        $date = date('Y-m-d', strtotime($checkInAt));
+        $shiftStart = strtotime($date . ' ' . $shift['start_time']);
+        // For overnight shifts where check-in is after midnight (before shift start time of day),
+        // the shift actually started the previous calendar day.
+        if (!empty($shift['is_overnight']) && strtotime($checkInAt) < $shiftStart) {
+            $shiftStart = strtotime(date('Y-m-d', strtotime($date . ' -1 day')) . ' ' . $shift['start_time']);
+        }
+        $grace   = (int) ($shift['grace_minutes'] ?? 0);
+        $allowed = $shiftStart + ($grace * 60);
+        $actual  = strtotime($checkInAt);
+        if ($actual <= $allowed) {
+            return 0;
+        }
+        return (int) floor(($actual - $allowed) / 60);
     }
 
     /**
