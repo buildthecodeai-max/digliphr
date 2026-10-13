@@ -7,7 +7,7 @@ $navScope = $isAdminNav ? 'admin' : 'employee';
 $activeWs = class_exists(Navigation::class) ? Navigation::activeWorkspace($navScope) : null;
 $workspaceLabel = $activeWs['label'] ?? 'Team Chat';
 $workspaceKey = $activeWs['key'] ?? 'chat';
-$workspaceAccent = $activeWs['accent'] ?? 'pink';
+$workspaceAccent = $activeWs['accent'] ?? '';
 $viewsPath = rtrim((string) config('app.paths.views'), '/');
 ?>
 <!DOCTYPE html>
@@ -37,10 +37,12 @@ $viewsPath = rtrim((string) config('app.paths.views'), '/');
     $chatJsVer = is_file($chatPublicAssets . '/js/chat.js') ? (string) filemtime($chatPublicAssets . '/js/chat.js') : (string) time();
     ?>
     <link href="<?= asset('css/chat.css') ?>?v=<?= e($chatCssVer) ?>" rel="stylesheet">
+    <link href="<?= asset('css/wow.css') ?>" rel="stylesheet">
     <link href="<?= asset('css/design-system.css') ?>" rel="stylesheet">
     <link href="<?= asset('css/saas-theme.css') ?>" rel="stylesheet">
     <link href="<?= asset('css/approved-theme.css') ?>" rel="stylesheet">
     <link href="<?= asset('css/instant-ui.css') ?>" rel="stylesheet">
+    <link href="<?= asset('css/dark-palette.css') ?>" rel="stylesheet">
 </head>
 <body class="app-body chat-body has-workspace-nav">
 <div class="app-shell" id="appShell" data-sidebar-scope="<?= $isAdminNav ? 'admin' : 'employee' ?>" data-workspace="<?= e($workspaceKey) ?>" data-accent="<?= e($workspaceAccent) ?>">
@@ -74,7 +76,10 @@ $viewsPath = rtrim((string) config('app.paths.views'), '/');
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notifCount">0</span>
                     </button>
                     <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:320px" id="notifMenu">
-                        <div class="p-2 border-bottom fw-semibold small">Notifications</div>
+                        <div class="p-2 border-bottom fw-semibold small d-flex justify-content-between align-items-center">
+                            <span>Notifications</span>
+                            <button type="button" class="btn btn-sm p-0 text-muted" id="notifMarkAllRead" style="font-size:.7rem;line-height:1.2">Mark all read</button>
+                        </div>
                         <div id="notifList" class="list-group list-group-flush small" style="max-height:280px;overflow:auto">
                             <div class="p-3 text-muted">Loading…</div>
                         </div>

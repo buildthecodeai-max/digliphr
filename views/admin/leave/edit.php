@@ -5,11 +5,15 @@
 $lr = $leaveRequest;
 $isApproved = ($lr['status'] ?? '') === 'approved';
 ?>
-<div class="container-fluid py-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h4 mb-0">Edit Leave #<?= (int) $lr['id'] ?></h1>
-        <a href="/admin/leave/<?= (int) $lr['id'] ?>" class="btn btn-outline-secondary btn-sm">Back</a>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1>Edit Leave #<?= (int) $lr['id'] ?></h1>
+        <p class="subtitle">Update leave request details</p>
     </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/admin/leave/<?= (int) $lr['id'] ?>" class="btn btn-soft btn-sm"><i data-lucide="arrow-left" style="width:14px;height:14px" class="me-1"></i>Back</a>
+    </div>
+</div>
     <?php include config('app.paths.views') . '/partials/alerts.php'; ?>
     <?php if ($isApproved): ?>
     <div class="alert alert-warning small">This leave is approved. Saving creates an amendment record and recalculates balances/attendance.</div>
@@ -78,4 +82,3 @@ $isApproved = ($lr['status'] ?? '') === 'approved';
             </form>
         </div>
     </div>
-</div>

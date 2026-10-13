@@ -1,5 +1,9 @@
-<div class="container-fluid py-3" style="max-width:720px">
-    <h1 class="h4 mb-3">Chat Settings</h1>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1>Chat Settings</h1>
+        <p class="subtitle">Configure messaging preferences and channel settings</p>
+    </div>
+</div>
     <form method="post" action="/admin/chat/settings" class="card border-0 shadow-sm p-3 mb-3">
         <?= csrf_field() ?>
         <div class="mb-3">
@@ -20,4 +24,3 @@
         <?= csrf_field() ?>
         <button type="submit" class="btn btn-soft">Rebuild auto-channels & sync members</button>
     </form>
-</div>

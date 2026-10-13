@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Controllers\Api;
 
 use App\Core\Controller;
+use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
-use App\Services\AuthService;
 use App\Services\Monitoring\MonitoringActivityService;
 use App\Services\Monitoring\MonitoringDeviceService;
 use App\Services\Monitoring\MonitoringHeartbeatService;
@@ -47,22 +47,19 @@ class MonitoringApiController extends Controller
             $this->jsonError('Email and password are required.', null, 422);
         }
 
-        $auth = new AuthService();
-        $result = $auth->attempt($email, $password, false);
-        if (empty($result['success'])) {
-            $this->jsonError($result['message'] ?? 'Authentication failed.', null, 401, 'AUTH_FAILED');
-        }
-
-        // attempt() may or may not set session; load user by email
-        $user = \App\Core\Database::getInstance()->fetch(
+        // Direct password check — monitoring endpoints are stateless (Bearer token).
+        // We must NOT call attempt() because it calls Session::regenerate() and issues
+        // cookies, which fails in this API context and causes misleading 500 errors.
+        $db = \App\Core\Database::getInstance();
+        $user = $db->fetch(
             'SELECT * FROM users WHERE email = :email AND deleted_at IS NULL AND is_active = 1 LIMIT 1',
             ['email' => $email]
         );
-        if (!$user) {
-            $this->jsonError('Authentication failed.', null, 401, 'AUTH_FAILED');
+        if (!$user || !password_verify($password, (string) ($user['password'] ?? ''))) {
+            $this->jsonError('Invalid email or password.', null, 401, 'AUTH_FAILED');
         }
 
-        $employee = \App\Core\Database::getInstance()->fetch(
+        $employee = $db->fetch(
             'SELECT * FROM employees WHERE user_id = :uid AND deleted_at IS NULL LIMIT 1',
             ['uid' => $user['id']]
         );
@@ -70,7 +67,7 @@ class MonitoringApiController extends Controller
             $this->jsonError('Employee profile required.', null, 403);
         }
 
-        if (!\App\Core\Database::getInstance()->tableExists('monitoring_devices')) {
+        if (!$db->tableExists('monitoring_devices')) {
             $this->jsonError(
                 'Work monitoring is not installed. Run migration 2026_07_30_work_activity_monitoring.sql in phpMyAdmin.',
                 null,
@@ -106,7 +103,7 @@ class MonitoringApiController extends Controller
 
         $policy = $this->policies->resolveForEmployee((int) $employee['id']);
         $needsAck = $policy && !$this->policies->hasAcknowledged((int) $employee['id'], $policy);
-        $siteRules = \App\Core\Database::getInstance()->tableExists('monitoring_site_rules')
+        $siteRules = $db->tableExists('monitoring_site_rules')
             ? $this->siteActivity->rulesForAgent((int) $employee['company_id'], (int) $employee['id'])
             : ['rules' => [], 'exceptions' => []];
 
@@ -326,6 +323,145 @@ class MonitoringApiController extends Controller
             $this->jsonError($result['message'], null, 422);
         }
         $this->jsonSuccess($result['message'], $result['data'] ?? null);
+    }
+
+    /**
+     * Generate a short-lived web-link token for the current web-session employee.
+     * Called from the employee portal (cookie auth). Agent then exchanges it.
+     */
+    public function webTokenGenerate(): void
+    {
+        $auth = new \App\Services\AuthService();
+        if (!$auth->id()) {
+            $this->jsonError('Unauthenticated.', null, 401, 'AUTH_REQUIRED');
+        }
+        $db = Database::getInstance();
+        $employee = $db->fetch(
+            'SELECT * FROM employees WHERE user_id = :uid AND deleted_at IS NULL LIMIT 1',
+            ['uid' => $auth->id()]
+        );
+        if (!$employee) {
+            $this->jsonError('Employee profile required.', null, 403);
+        }
+
+        $deviceUid = trim((string) $this->request->input('device_uid', ''));
+        if ($deviceUid === '') {
+            $this->jsonError('device_uid is required.', null, 422);
+        }
+
+        $plain  = bin2hex(random_bytes(16));
+        $hash   = hash('sha256', $plain);
+        $expires = date('Y-m-d H:i:s', time() + 300); // 5-minute TTL
+
+        $db->query(
+            'INSERT INTO monitoring_agent_links (device_uid, employee_id, token_hash, expires_at, created_at)
+             VALUES (:uid, :eid, :hash, :exp, NOW())
+             ON DUPLICATE KEY UPDATE token_hash = VALUES(token_hash), expires_at = VALUES(expires_at),
+                                      used_at = NULL, created_at = NOW()',
+            ['uid' => $deviceUid, 'eid' => (int) $employee['id'], 'hash' => $hash, 'exp' => $expires]
+        );
+
+        $this->jsonSuccess('Web link token generated.', [
+            'token'      => $plain,
+            'expires_at' => $expires,
+            'employee'   => trim($employee['first_name'] . ' ' . $employee['last_name']),
+        ]);
+    }
+
+    /**
+     * Check whether a web-link token is waiting for this device_uid.
+     * Returns {ready: true} if a valid unused token exists, {ready: false} otherwise.
+     * The agent polls this endpoint then calls webTokenExchange() to consume it.
+     */
+    public function webTokenStatus(): void
+    {
+        $db        = Database::getInstance();
+        $deviceUid = trim((string) $this->request->query('device_uid', ''));
+        if ($deviceUid === '' || !$db->tableExists('monitoring_agent_links')) {
+            $this->jsonSuccess('Status checked.', ['ready' => false]);
+            return;
+        }
+        $exists = $db->fetchColumn(
+            'SELECT COUNT(*) FROM monitoring_agent_links
+             WHERE device_uid = :uid AND expires_at > NOW() AND used_at IS NULL',
+            ['uid' => $deviceUid]
+        );
+        $this->jsonSuccess('Status checked.', ['ready' => (int) $exists > 0]);
+    }
+
+    /**
+     * Exchange a web-link token for a device access_token (no password needed).
+     * Called by the Electron agent after the employee generates a token in the web portal.
+     */
+    public function webTokenExchange(): void
+    {
+        $db        = Database::getInstance();
+        $deviceUid = trim((string) $this->request->input('device_uid', ''));
+
+        if ($deviceUid === '') {
+            $this->jsonError('device_uid is required.', null, 422);
+        }
+
+        if (!$db->tableExists('monitoring_agent_links')) {
+            $this->jsonError('Run migration 2026_10_13_monitoring_agent_links.sql first.', null, 503, 'MIGRATION_REQUIRED');
+        }
+
+        // Agent sends device_uid; server looks up the valid token the employee generated via web
+        $link = $db->fetch(
+            'SELECT * FROM monitoring_agent_links
+             WHERE device_uid = :uid AND expires_at > NOW() AND used_at IS NULL
+             ORDER BY created_at DESC LIMIT 1',
+            ['uid' => $deviceUid]
+        );
+        if (!$link) {
+            $this->jsonError('Invalid or expired web link token.', null, 401, 'AUTH_FAILED');
+        }
+
+        $db->update('monitoring_agent_links', ['used_at' => date('Y-m-d H:i:s')], 'id = :id', ['id' => $link['id']]);
+
+        $employeeId = (int) $link['employee_id'];
+        $employee   = $db->fetch('SELECT * FROM employees WHERE id = :id AND deleted_at IS NULL', ['id' => $employeeId]);
+        if (!$employee) {
+            $this->jsonError('Employee not found.', null, 404);
+        }
+
+        $reg = $this->devices->register($employeeId, [
+            'device_uid'    => $deviceUid,
+            'hostname'      => $this->request->input('hostname'),
+            'os_name'       => $this->request->input('os_name', 'windows'),
+            'os_version'    => $this->request->input('os_version'),
+            'agent_version' => $this->request->input('agent_version', '0.1.0'),
+        ], true);
+
+        if (!$reg['success']) {
+            $this->jsonError($reg['message'], $reg['data'] ?? null, 403, $reg['code'] ?? null);
+        }
+
+        $policy   = $this->policies->resolveForEmployee($employeeId);
+        $needsAck = $policy && !$this->policies->hasAcknowledged($employeeId, $policy);
+        $siteRules = $db->tableExists('monitoring_site_rules')
+            ? $this->siteActivity->rulesForAgent((int) $employee['company_id'], $employeeId)
+            : ['rules' => [], 'exceptions' => []];
+
+        $this->jsonSuccess('Authenticated via web session.', array_merge($reg['data'] ?? [], [
+            'employee' => [
+                'id'            => $employeeId,
+                'name'          => trim(($employee['first_name'] ?? '') . ' ' . ($employee['last_name'] ?? '')),
+                'employee_code' => $employee['employee_code'] ?? null,
+            ],
+            'policy'     => $policy ? [
+                'id'                        => (int) $policy['id'],
+                'name'                      => $policy['name'],
+                'version'                   => (int) $policy['version'],
+                'mode'                      => $policy['mode'],
+                'screenshot_interval_minutes' => (int) $policy['screenshot_interval_minutes'],
+                'require_acknowledgement'   => (int) $policy['require_acknowledgement'],
+                'notice_title'              => $policy['notice_title'],
+                'notice_text'               => $policy['notice_text'],
+                'acknowledgement_required'  => $needsAck,
+            ] : null,
+            'site_rules' => $siteRules,
+        ]));
     }
 
     /** @return array<string, mixed> */

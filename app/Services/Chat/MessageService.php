@@ -891,13 +891,34 @@ final class MessageService
             $title = 'New message in #' . $channelName;
         }
 
-        (new NotificationService())->notifyMany(
-            $recipientIds,
-            $title,
-            $preview,
-            $this->chatActionUrl($channelId, $conversationId, $messageId),
-            'chat_message'
-        );
+        // Deduplicate: if an unread chat_message notification already exists for this
+        // recipient + channel/DM, update it instead of inserting another row. This
+        // prevents notification spam when many messages are sent between mark-as-reads.
+        $actionUrl  = $this->chatActionUrl($channelId, $conversationId, $messageId);
+        $urlBase    = $channelId ? '/chat?channel=' . $channelId : '/chat?dm=' . $conversationId;
+        $urlPattern = $urlBase . '%';
+        $now        = date('Y-m-d H:i:s');
+        $notifier   = new NotificationService();
+
+        foreach ($recipientIds as $recipientId) {
+            $existing = $this->db->fetch(
+                "SELECT id FROM notifications
+                 WHERE user_id = :uid AND type = 'chat_message' AND is_read = 0
+                   AND action_url LIKE :pat
+                 ORDER BY created_at DESC LIMIT 1",
+                ['uid' => $recipientId, 'pat' => $urlPattern]
+            );
+            if ($existing) {
+                $this->db->update('notifications', [
+                    'title'      => $title,
+                    'message'    => $preview,
+                    'action_url' => $actionUrl,
+                    'created_at' => $now,
+                ], 'id = :id', ['id' => (int) $existing['id']]);
+            } else {
+                $notifier->notify($recipientId, $title, $preview, $actionUrl, 'chat_message');
+            }
+        }
         return $recipientIds;
     }
 

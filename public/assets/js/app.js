@@ -276,6 +276,7 @@
     }
 
     var _prevUnread = -1;
+    var _dismissedSmartTypes = {};
 
     function _relativeTime(dateStr) {
         if (!dateStr) return '';
@@ -306,36 +307,67 @@
         }
     }
 
-    function renderNotificationRows(list, count, payload) {
+    function _hexRgba(hex, a) {
+        var r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+    }
+
+    function renderNotificationRows(list, count, payload, smartItems) {
         var parsed = notificationItems(payload);
+        var smart = Array.isArray(smartItems) ? smartItems : [];
+        var totalUnread = parsed.unread;
         var btn = document.getElementById('notifBtn');
         if (count) {
-            if (parsed.unread > 0) {
-                var isNew = _prevUnread >= 0 && parsed.unread > _prevUnread;
-                count.textContent = String(parsed.unread > 99 ? '99+' : parsed.unread);
+            if (totalUnread > 0) {
+                var isNew = _prevUnread >= 0 && totalUnread > _prevUnread;
+                count.textContent = String(totalUnread > 99 ? '99+' : totalUnread);
                 count.classList.remove('d-none');
-                if (isNew || (_prevUnread === -1 && parsed.unread > 0)) {
+                if (isNew || (_prevUnread === -1 && totalUnread > 0)) {
                     _ringBell(btn, count, true);
                 }
             } else {
                 count.classList.add('d-none');
             }
         }
-        _prevUnread = parsed.unread;
-        var unreadItems = parsed.items.filter(function (n) { return !Number(n.is_read); });
-        if (!unreadItems.length) {
-            list.innerHTML = '<div class="p-3 text-muted">You\'re all caught up.</div>';
-            return;
+        _prevUnread = totalUnread;
+        var html = '';
+        var visibleSmart = smart.filter(function (s) { return !_dismissedSmartTypes[s.type]; });
+        if (visibleSmart.length > 0) {
+            html += '<div class="notif-section-label">HR Alerts</div>';
+            html += visibleSmart.map(function (s) {
+                var c = s.color || '#6366f1';
+                var bg = _hexRgba(c, .13);
+                return '<div class="notif-smart-item d-flex align-items-center" data-smart-type="' + s.type + '">' +
+                    '<a href="' + (s.url || '#') + '" class="flex-grow-1 d-flex align-items-center gap-2 text-decoration-none" style="color:inherit;min-width:0">' +
+                    '<span class="notif-icon-wrap flex-shrink-0" style="background:' + bg + ';color:' + c + '">' +
+                    '<i data-lucide="' + (s.icon || 'bell') + '"></i></span>' +
+                    '<span class="notif-body"><span class="notif-title">' + (s.title || '') + '</span>' +
+                    '<span class="notif-sub">' + (s.sub || '') + '</span></span>' +
+                    '</a>' +
+                    '<button type="button" class="btn-close flex-shrink-0 ms-2" data-dismiss-smart="' + s.type + '" aria-label="Dismiss" style="font-size:.5rem;opacity:.35"></button>' +
+                    '</div>';
+            }).join('');
         }
-        list.innerHTML = unreadItems.slice(0, 8).map(function (n) {
-            var href = n.action_url || '#';
-            var time = _relativeTime(n.created_at);
-            return '<a class="list-group-item list-group-item-action unread" href="' + href + '" data-notif-id="' + (n.id || '') + '">' +
-                '<div class="fw-semibold">' + (n.title || 'Notification') + '</div>' +
-                '<div class="text-muted small">' + (n.message || '') + '</div>' +
-                (time ? '<div class="notif-time">' + time + '</div>' : '') +
-                '</a>';
-        }).join('');
+        var unreadItems = parsed.items.filter(function (n) { return !Number(n.is_read); });
+        if (unreadItems.length > 0) {
+            if (smart.length > 0) html += '<div class="notif-section-label">Recent</div>';
+            html += unreadItems.slice(0, 6).map(function (n) {
+                var href = n.action_url || '#';
+                var time = _relativeTime(n.created_at);
+                return '<a class="notif-item unread" href="' + href + '" data-notif-id="' + (n.id || '') + '">' +
+                    '<span class="notif-icon-wrap" style="background:rgba(32,212,131,.12);color:#20d483">' +
+                    '<i data-lucide="bell"></i></span>' +
+                    '<span class="notif-body"><span class="notif-title">' + (n.title || 'Notification') + '</span>' +
+                    '<span class="notif-sub">' + (n.message || '') + '</span>' +
+                    (time ? '<span class="notif-time">' + time + '</span>' : '') +
+                    '</span></a>';
+            }).join('');
+        }
+        if (!html) {
+            html = '<div class="p-3 text-center text-muted small">You\'re all caught up 🎉</div>';
+        }
+        list.innerHTML = html;
+        if (window.lucide) lucide.createIcons({ nodes: [list] });
     }
 
     function refreshNotifications() {
@@ -343,24 +375,31 @@
         var count = document.getElementById('notifCount');
         if (!list && !count) return Promise.resolve();
 
-        return EMS.fetchJson('/api/notifications').then(function (res) {
-            var payload = res.data || [];
+        return Promise.all([
+            EMS.fetchJson('/api/notifications').catch(function () { return null; }),
+            EMS.fetchJson('/api/notifications/smart').catch(function () { return null; })
+        ]).then(function (results) {
+            var notifRes  = results[0];
+            var smartRes  = results[1];
+            var payload   = notifRes ? (notifRes.data || []) : [];
+            var smartItems = (smartRes && smartRes.data && Array.isArray(smartRes.data.items)) ? smartRes.data.items : [];
             if (list) {
-                renderNotificationRows(list, count, payload);
+                renderNotificationRows(list, count, payload, smartItems);
             } else if (count) {
                 var parsed = notificationItems(payload);
+                var totalUnread = parsed.unread;
                 var btn = document.getElementById('notifBtn');
-                if (parsed.unread > 0) {
-                    var isNew = _prevUnread >= 0 && parsed.unread > _prevUnread;
-                    count.textContent = String(parsed.unread > 99 ? '99+' : parsed.unread);
+                if (totalUnread > 0) {
+                    var isNew = _prevUnread >= 0 && totalUnread > _prevUnread;
+                    count.textContent = String(totalUnread > 99 ? '99+' : totalUnread);
                     count.classList.remove('d-none');
-                    if (isNew || (_prevUnread === -1 && parsed.unread > 0)) {
+                    if (isNew || (_prevUnread === -1 && totalUnread > 0)) {
                         _ringBell(btn, count, true);
                     }
                 } else {
                     count.classList.add('d-none');
                 }
-                _prevUnread = parsed.unread;
+                _prevUnread = totalUnread;
             }
         }).catch(function () {
             if (list) list.innerHTML = '<div class="p-3 text-muted">Unable to load notifications.</div>';
@@ -380,12 +419,37 @@
 
         if (list) {
             list.addEventListener('click', function (e) {
+                // Dismiss HR alert
+                var dismissBtn = e.target.closest('[data-dismiss-smart]');
+                if (dismissBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var smartType = dismissBtn.getAttribute('data-dismiss-smart');
+                    _dismissedSmartTypes[smartType] = true;
+                    var smartItem = dismissBtn.closest('[data-smart-type]');
+                    if (smartItem) smartItem.remove();
+                    if (!list.querySelector('[data-smart-type]')) {
+                        var label = list.querySelector('.notif-section-label');
+                        if (label) label.remove();
+                    }
+                    if (!list.querySelector('[data-notif-id],[data-smart-type]')) {
+                        list.innerHTML = '<div class="p-3 text-center text-muted small">You\'re all caught up 🎉</div>';
+                    }
+                    return;
+                }
+
                 var link = e.target.closest('[data-notif-id]');
                 if (!link) return;
                 var id = link.getAttribute('data-notif-id');
                 if (!id) return;
+
+                // Prevent the <a> from navigating; we handle it below after marking read
+                e.preventDefault();
+
+                var href = link.getAttribute('href');
                 var wasUnread = link.classList.contains('unread');
-                EMS.fetchJson('/api/notifications/' + id + '/read', { method: 'POST', body: {} }).catch(function () {});
+
+                // Optimistic removal from DOM
                 link.remove();
                 if (wasUnread) {
                     _prevUnread = Math.max(0, _prevUnread - 1);
@@ -398,7 +462,25 @@
                     }
                 }
                 if (!list.querySelector('[data-notif-id]')) {
-                    list.innerHTML = '<div class="p-3 text-muted">You\'re all caught up.</div>';
+                    list.innerHTML = '<div class="p-3 text-center text-muted small">You\'re all caught up 🎉</div>';
+                }
+
+                // Mark as read with keepalive so the request survives page navigation
+                var csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
+                fetch('/api/notifications/' + id + '/read', {
+                    method: 'POST',
+                    keepalive: true,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrf,
+                        'Content-Type': 'application/json'
+                    },
+                    body: '{}'
+                });
+
+                // Navigate to the notification's target if it has one
+                if (href && href !== '#') {
+                    window.location.href = href;
                 }
             });
         }
@@ -407,14 +489,18 @@
         if (markAllBtn) {
             markAllBtn.addEventListener('click', function (e) {
                 e.stopPropagation();
+                markAllBtn.disabled = true;
                 EMS.fetchJson('/api/notifications/read-all', { method: 'POST', body: {} }).then(function () {
-                    if (list) {
-                        list.querySelectorAll('[data-notif-id]').forEach(function (el) { el.remove(); });
-                        list.innerHTML = '<div class="p-3 text-muted">You\'re all caught up.</div>';
-                    }
                     _prevUnread = 0;
                     if (count) count.classList.add('d-none');
-                }).catch(function () {});
+                    // Re-fetch from server to confirm 0 unread and refresh the list
+                    return refreshNotifications();
+                }).catch(function () {
+                    // On failure, still try to re-fetch to reflect true state
+                    refreshNotifications();
+                }).finally(function () {
+                    markAllBtn.disabled = false;
+                });
             });
         }
     }

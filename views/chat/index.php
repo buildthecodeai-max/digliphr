@@ -20,7 +20,7 @@
             </div>
             <div class="chat-rail-actions">
                 <?php if (!empty($canCreateChannel)): ?>
-                <button type="button" class="btn btn-sm btn-primary" id="btnCreateChannel" title="New channel">
+                <button type="button" class="btn btn-sm btn-soft" id="btnCreateChannel" title="New channel">
                     <i data-lucide="hash"></i>
                 </button>
                 <?php endif; ?>

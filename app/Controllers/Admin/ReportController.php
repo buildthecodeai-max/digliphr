@@ -296,8 +296,8 @@ class ReportController extends Controller
              FROM attendance a
              INNER JOIN employees e ON e.id = a.employee_id
              LEFT JOIN departments d ON d.id = e.department_id
-             LEFT JOIN branches b ON b.id = e.branch_id
-             LEFT JOIN shifts s ON s.id = a.shift_id
+             LEFT JOIN branches b ON b.id = COALESCE(a.branch_id, e.branch_id)
+             LEFT JOIN shifts s ON s.id = COALESCE(a.shift_id, e.shift_id)
              WHERE a.status = 'absent' AND a.attendance_date BETWEEN :from AND :to AND a.deleted_at IS NULL AND {$where}",
             array_merge($baseParams, ['from' => $filters['from'], 'to' => $filters['to']])
         );
@@ -480,8 +480,8 @@ class ReportController extends Controller
              FROM attendance a
              INNER JOIN employees e ON e.id = a.employee_id
              LEFT JOIN departments d ON d.id = e.department_id
-             LEFT JOIN branches b ON b.id = e.branch_id
-             LEFT JOIN shifts s ON s.id = a.shift_id
+             LEFT JOIN branches b ON b.id = COALESCE(a.branch_id, e.branch_id)
+             LEFT JOIN shifts s ON s.id = COALESCE(a.shift_id, e.shift_id)
              WHERE a.early_leave_minutes > 0 AND {$where}
              ORDER BY a.attendance_date DESC, a.early_leave_minutes DESC",
             $params
@@ -511,7 +511,7 @@ class ReportController extends Controller
              LEFT JOIN departments d ON d.id = e.department_id
              LEFT JOIN overtime_requests ot ON ot.employee_id = a.employee_id AND ot.overtime_date = a.attendance_date AND ot.deleted_at IS NULL
              LEFT JOIN users ru ON ru.id = ot.reviewed_by
-             WHERE a.overtime_minutes > 0 AND {$where}
+             WHERE a.overtime_minutes > 0 AND a.check_out_at IS NOT NULL AND {$where}
              ORDER BY a.attendance_date DESC, a.overtime_minutes DESC",
             $params
         );

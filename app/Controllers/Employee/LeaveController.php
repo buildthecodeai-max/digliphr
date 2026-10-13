@@ -8,6 +8,7 @@ use App\Core\Controller;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
+use App\Models\PlannedOffDay;
 use App\Services\LeaveService;
 use RuntimeException;
 
@@ -17,6 +18,7 @@ class LeaveController extends Controller
     private LeaveType $leaveTypes;
     private LeaveBalance $leaveBalances;
     private LeaveService $leaveService;
+    private PlannedOffDay $plannedOffs;
 
     public function __construct($request, $response)
     {
@@ -25,6 +27,7 @@ class LeaveController extends Controller
         $this->leaveTypes = new LeaveType();
         $this->leaveBalances = new LeaveBalance();
         $this->leaveService = new LeaveService();
+        $this->plannedOffs = new PlannedOffDay();
     }
 
     public function index(): void
@@ -37,12 +40,14 @@ class LeaveController extends Controller
         $page = max(1, (int) $this->request->input('page', 1));
         $paginator = $this->leaveRequests->search(['employee_id' => (int) $employee['id']], $page);
         $balances = $this->leaveBalances->forEmployee((int) $employee['id']);
+        $plannedOff = $this->plannedOffs->forEmployee((int) $employee['id'], true);
 
         $this->view('employee.leave.index', [
-            'title' => 'My Leave',
-            'requests' => $paginator['data'],
-            'paginator' => $paginator,
-            'balances' => $balances,
+            'title'      => 'My Leave',
+            'requests'   => $paginator['data'],
+            'paginator'  => $paginator,
+            'balances'   => $balances,
+            'plannedOff' => $plannedOff,
         ], 'layouts/employee');
     }
 

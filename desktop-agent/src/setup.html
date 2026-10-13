@@ -88,6 +88,37 @@
       margin-top: 14px;
       line-height: 1.5;
     }
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 16px 0;
+      color: #c0cce0;
+      font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e4eaf3;
+    }
+    .btn-secondary {
+      background: #fff;
+      color: #1e3a5f;
+      border: 1.5px solid #d0d8e8;
+    }
+    .btn-secondary:hover { background: #f4f6f9; }
+    .btn-secondary:disabled { color: #8fa5c0; cursor: default; background: #f9fbfd; }
+    .status-msg {
+      text-align: center;
+      font-size: 13px;
+      padding: 9px 12px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      display: none;
+    }
+    .status-msg.info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+    .status-msg.ok   { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
   </style>
 </head>
 <body>
@@ -102,7 +133,12 @@
     <label for="password">Password</label>
     <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
     <button class="btn" id="btn" onclick="doLogin()">Sign In & Activate</button>
-    <p class="note">Your device will be registered for monitoring.<br>You will be asked to acknowledge the policy.</p>
+
+    <div class="divider">or</div>
+
+    <div class="status-msg" id="webStatus"></div>
+    <button class="btn btn-secondary" id="webBtn" onclick="doWebConnect()">Connect via Web Session</button>
+    <p class="note">Already logged into the web portal? Click above to connect without a password.</p>
   </div>
   <script>
     const { ipcRenderer } = require('electron');
@@ -145,6 +181,46 @@
 
     document.getElementById('password').addEventListener('keydown', e => {
       if (e.key === 'Enter') doLogin();
+    });
+
+    function showWebStatus(msg, type) {
+      const el = document.getElementById('webStatus');
+      el.textContent = msg;
+      el.className = 'status-msg ' + type;
+      el.style.display = 'block';
+    }
+
+    async function doWebConnect() {
+      const webBtn = document.getElementById('webBtn');
+      webBtn.disabled = true;
+      webBtn.textContent = 'Opening browser…';
+      showWebStatus('Waiting for web portal approval — approve in your browser, then return here.', 'info');
+
+      const result = await ipcRenderer.invoke('setup:web-connect');
+      if (!result.success) {
+        showWebStatus(result.message || 'Failed to start web connect.', 'error');
+        webBtn.disabled = false;
+        webBtn.textContent = 'Connect via Web Session';
+      }
+    }
+
+    ipcRenderer.on('web-connect:success', () => {
+      showWebStatus('Connected successfully! Starting monitoring…', 'ok');
+      document.getElementById('webBtn').textContent = 'Connected!';
+    });
+
+    ipcRenderer.on('web-connect:timeout', () => {
+      showWebStatus('Timed out. Please try again.', 'error');
+      const webBtn = document.getElementById('webBtn');
+      webBtn.disabled = false;
+      webBtn.textContent = 'Connect via Web Session';
+    });
+
+    ipcRenderer.on('web-connect:error', (_event, msg) => {
+      showWebStatus(msg || 'Connection failed. Try again.', 'error');
+      const webBtn = document.getElementById('webBtn');
+      webBtn.disabled = false;
+      webBtn.textContent = 'Connect via Web Session';
     });
   </script>
 </body>

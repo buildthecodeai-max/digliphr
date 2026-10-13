@@ -50,6 +50,34 @@ foreach ($balances as $b) {
     </div>
 </div>
 
+<?php if (!empty($plannedOff)): ?>
+<div class="card ems-card mb-3 border-warning" style="border-left:3px solid #f59e0b">
+    <div class="card-header d-flex align-items-center gap-2">
+        <i data-lucide="calendar-off" style="width:16px;height:16px;color:#f59e0b"></i>
+        <strong>Scheduled Off Days</strong>
+        <span class="badge bg-warning text-dark ms-1"><?= count($plannedOff) ?></span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+            <thead><tr><th>Date</th><th>Reason</th><th>Note</th></tr></thead>
+            <tbody>
+            <?php foreach ($plannedOff as $pod): ?>
+            <?php $isToday = $pod['off_date'] === date('Y-m-d'); ?>
+            <tr<?= $isToday ? ' class="table-warning"' : '' ?>>
+                <td class="text-nowrap fw-semibold">
+                    <?php if ($isToday): ?><span class="badge bg-warning text-dark me-1">Today</span><?php endif; ?>
+                    <?= e(date('D, d M Y', strtotime($pod['off_date']))) ?>
+                </td>
+                <td><?= e($pod['reason']) ?></td>
+                <td class="text-muted"><?= e($pod['note'] ?? '—') ?></td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
+
 <div class="card ems-card mb-3">
     <div class="card-header">Leave History</div>
     <div class="table-responsive">

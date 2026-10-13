@@ -6,12 +6,14 @@
 $query = http_build_query(array_filter($filters ?? [], static fn ($v) => $v !== null && $v !== '' && $v !== 1));
 $forceDeleteModals = [];
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
     <div>
-        <h1 class="h4 mb-0">Archived Leave</h1>
-        <p class="text-muted small mb-0">Soft-deleted leave requests retained for audit</p>
+        <h1>Archived Leave</h1>
+        <p class="subtitle">Browse archived leave requests</p>
     </div>
-    <a href="/admin/leave" class="btn btn-outline-secondary btn-sm">Active Leave</a>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/admin/leave" class="btn btn-soft btn-sm">Active Leave</a>
+    </div>
 </div>
 <?php include config('app.paths.views') . '/partials/alerts.php'; ?>
 
@@ -44,11 +46,38 @@ $forceDeleteModals = [];
     </div>
 </div>
 
+<?php if (can('leave.restore') || can('leave.permanently_delete')): ?>
+<form method="POST" action="" id="bulkArchivedForm">
+    <?= csrf_field() ?>
+    <input type="hidden" name="reason" id="bulkDeleteReasonHidden">
+
+    <div id="bulkArchivedBar" class="card mb-2 border-warning" style="display:none">
+        <div class="card-body py-2 d-flex align-items-center gap-2 flex-wrap">
+            <span class="fw-semibold small"><span id="bulkArchivedCount">0</span> selected</span>
+            <?php if (can('leave.restore')): ?>
+            <button type="button" class="btn btn-success btn-sm" id="bulkRestoreBtn">
+                <i data-lucide="rotate-ccw" style="width:13px;height:13px" class="me-1"></i>Restore Selected
+            </button>
+            <?php endif; ?>
+            <?php if (can('leave.permanently_delete')): ?>
+            <input type="text" id="bulkDeleteReasonInput" class="form-control form-control-sm" style="max-width:220px" placeholder="Delete reason (required)">
+            <button type="button" class="btn btn-danger btn-sm" id="bulkDeleteBtn">
+                <i data-lucide="trash-2" style="width:13px;height:13px" class="me-1"></i>Delete Selected
+            </button>
+            <?php endif; ?>
+            <button type="button" class="btn btn-soft btn-sm ms-auto" id="bulkArchivedClear">Clear selection</button>
+        </div>
+    </div>
+<?php endif; ?>
+
 <div class="card">
     <div class="table-responsive table-actions-visible">
         <table class="table table-sm table-hover mb-0 align-middle">
             <thead class="table-light">
             <tr>
+                <?php if (can('leave.restore') || can('leave.permanently_delete')): ?>
+                <th style="width:32px"><input type="checkbox" class="form-check-input" id="selectAllRestore" title="Select all"></th>
+                <?php endif; ?>
                 <th>#</th>
                 <th>Employee</th>
                 <th>Type</th>
@@ -63,7 +92,7 @@ $forceDeleteModals = [];
             </thead>
             <tbody>
             <?php if (empty($requests)): ?>
-                <tr><td colspan="10" class="text-center text-muted py-4">No archived leave records found.</td></tr>
+                <tr><td colspan="<?= (can('leave.restore') || can('leave.permanently_delete')) ? 11 : 10 ?>" class="text-center text-muted py-4">No archived leave records found.</td></tr>
             <?php else:
                 foreach ($requests as $row):
                     $rid = (int) $row['id'];
@@ -71,6 +100,9 @@ $forceDeleteModals = [];
                     $deleteLabel = trim(($row['employee_name'] ?? '') . ' · ' . ($row['leave_type_name'] ?? '') . ' · ' . ($row['start_date'] ?? ''));
             ?>
                 <tr>
+                    <?php if (can('leave.restore') || can('leave.permanently_delete')): ?>
+                    <td><input type="checkbox" class="form-check-input restore-check" name="ids[]" value="<?= $rid ?>"></td>
+                    <?php endif; ?>
                     <td><?= $rid ?></td>
                     <td>
                         <div class="fw-semibold"><?= e($row['employee_name'] ?? '') ?></div>
@@ -127,6 +159,77 @@ $forceDeleteModals = [];
         <div class="card-footer py-2"><?= paginate_links($paginator, '/admin/leave/archived?' . $query) ?></div>
     <?php endif; ?>
 </div>
+
+<?php if (can('leave.restore') || can('leave.permanently_delete')): ?>
+</form>
+<script>
+(function () {
+    var form       = document.getElementById('bulkArchivedForm');
+    var bar        = document.getElementById('bulkArchivedBar');
+    var counter    = document.getElementById('bulkArchivedCount');
+    var selectAll  = document.getElementById('selectAllRestore');
+    var restoreBtn = document.getElementById('bulkRestoreBtn');
+    var deleteBtn  = document.getElementById('bulkDeleteBtn');
+    var clearBtn   = document.getElementById('bulkArchivedClear');
+    var reasonInp  = document.getElementById('bulkDeleteReasonInput');
+
+    function getChecked() {
+        return Array.from(document.querySelectorAll('.restore-check:checked'));
+    }
+
+    function update() {
+        var checked = getChecked();
+        counter.textContent = checked.length;
+        bar.style.display = checked.length > 0 ? '' : 'none';
+        if (selectAll) {
+            var all = document.querySelectorAll('.restore-check');
+            selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+            selectAll.checked = all.length > 0 && checked.length === all.length;
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    document.querySelectorAll('.restore-check').forEach(function (cb) {
+        cb.addEventListener('change', update);
+    });
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            document.querySelectorAll('.restore-check').forEach(function (cb) { cb.checked = selectAll.checked; });
+            update();
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+            document.querySelectorAll('.restore-check').forEach(function (cb) { cb.checked = false; });
+            if (selectAll) selectAll.checked = false;
+            update();
+        });
+    }
+
+    if (restoreBtn) {
+        restoreBtn.addEventListener('click', function () {
+            if (!confirm('Restore ' + getChecked().length + ' leave request(s) to active?')) return;
+            form.action = '/admin/leave/bulk-restore';
+            form.submit();
+        });
+    }
+
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function () {
+            var reason = reasonInp ? reasonInp.value.trim() : '';
+            if (!reason) { if (reasonInp) { reasonInp.focus(); reasonInp.classList.add('is-invalid'); } return; }
+            if (reasonInp) reasonInp.classList.remove('is-invalid');
+            if (!confirm('Permanently delete ' + getChecked().length + ' leave request(s)? This cannot be undone.')) return;
+            document.getElementById('bulkDeleteReasonHidden').value = reason;
+            form.action = '/admin/leave/bulk-force-delete';
+            form.submit();
+        });
+    }
+})();
+</script>
+<?php endif; ?>
 
 <?php if (!empty($forceDeleteModals)): ?>
 <?php foreach ($forceDeleteModals as $modal): ?>

@@ -62,38 +62,117 @@ function leave_chart_panel(string $title, string $canvasId, array $data, string 
 <?php endif; ?>
 
 <?php if ($showTables): ?>
-<div class="card mb-3">
-    <div class="card-header">Leave Balance Overview</div>
-    <?php if (empty($balances)): ?>
-        <div class="p-2">
-            <?php ui('empty-state', [
-                'icon' => 'wallet',
-                'title' => 'No leave balances found',
-                'text' => 'Balances for the selected year will appear here once accrual runs.',
-            ]); ?>
-        </div>
-    <?php else: ?>
-    <div class="table-responsive">
-        <table class="table table-sm mb-0">
-            <thead><tr><th>Employee</th><th>Type</th><th>Opening</th><th>Accrued</th><th>Used</th><th>Pending</th><th>Carried</th><th>Closing</th></tr></thead>
-            <tbody>
-            <?php foreach ($balances as $b): ?>
-                <tr>
-                    <td><?= e($b['employee_name']) ?></td>
-                    <td><?= e($b['leave_type']) ?></td>
-                    <td><?= e(number_format((float) $b['opening_balance'], 1)) ?></td>
-                    <td><?= e(number_format((float) $b['accrued'], 1)) ?></td>
-                    <td><?= e(number_format((float) $b['used'], 1)) ?></td>
-                    <td><?= e(number_format((float) $b['pending'], 1)) ?></td>
-                    <td><?= e(number_format((float) $b['carried_forward'], 1)) ?></td>
-                    <td class="fw-semibold"><?= e(number_format((float) $b['closing_balance'], 1)) ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-    <?php endif; ?>
+<?php
+/* Group balances by employee */
+$grouped = [];
+foreach ($balances as $b) {
+    $key = $b['employee_name'];
+    $grouped[$key][] = $b;
+}
+?>
+<div class="d-flex align-items-center justify-content-between mb-2 mt-1">
+    <h6 class="mb-0 fw-semibold" style="font-size:.95rem;letter-spacing:.01em">
+        <i data-lucide="wallet" style="width:15px;height:15px" class="me-1 text-primary"></i>
+        Leave Balance Overview
+    </h6>
+    <span class="badge text-bg-secondary"><?= count($grouped) ?> employee<?= count($grouped) !== 1 ? 's' : '' ?></span>
 </div>
+
+<?php if (empty($grouped)): ?>
+<div class="card mb-3">
+    <div class="p-2">
+        <?php ui('empty-state', [
+            'icon' => 'wallet',
+            'title' => 'No leave balances found',
+            'text' => 'Balances for the selected year will appear here once accrual runs.',
+        ]); ?>
+    </div>
+</div>
+<?php else: ?>
+<div class="row g-3 mb-3">
+<?php foreach ($grouped as $empName => $rows):
+    $initials   = implode('', array_map(fn($w) => strtoupper($w[0]), array_slice(explode(' ', trim($empName)), 0, 2)));
+    $empId      = (int) ($rows[0]['employee_id'] ?? 0);
+    $empYear    = (int) ($rows[0]['year'] ?? date('Y'));
+    $balanceUrl = '/admin/leave/balances?employee_id=' . $empId . '&year=' . $empYear;
+    $totalUsed    = array_sum(array_column($rows, 'used'));
+    $totalOpening = array_sum(array_column($rows, 'opening_balance'));
+    $totalClosing = array_sum(array_column($rows, 'closing_balance'));
+    $closingClass = $totalClosing < 0 ? 'text-danger' : ($totalClosing > 0 ? 'text-success' : 'text-muted');
+?>
+<div class="col-lg-6 col-xl-4">
+    <a href="<?= e($balanceUrl) ?>" class="text-decoration-none d-block h-100">
+    <div class="card h-100 shadow-sm leave-balance-card" style="border-top:3px solid var(--ems-primary,#3b82f6);transition:box-shadow .15s,transform .15s;cursor:pointer">
+        <!-- Employee header -->
+        <div class="card-body pb-2 pt-3">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0"
+                     style="width:42px;height:42px;font-size:.85rem;background:var(--ems-primary,#3b82f6)">
+                    <?= e($initials) ?>
+                </div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="fw-semibold text-truncate" style="font-size:.95rem"><?= e($empName) ?></div>
+                    <?php if (!empty($rows[0]['employee_code'])): ?>
+                    <div class="text-muted small"><?= e($rows[0]['employee_code']) ?></div>
+                    <?php endif; ?>
+                </div>
+                <div class="text-end flex-shrink-0">
+                    <div class="small text-muted">Closing</div>
+                    <div class="fw-bold fs-6 <?= $closingClass ?>"><?= number_format($totalClosing, 1) ?></div>
+                </div>
+            </div>
+
+            <!-- Leave type rows -->
+            <div style="border-top:1px solid var(--ems-border,#e2e8f0)">
+            <?php foreach ($rows as $b):
+                $opening = (float)$b['opening_balance'];
+                $used    = (float)$b['used'];
+                $pending = (float)$b['pending'];
+                $closing = (float)$b['closing_balance'];
+                $usedPct = $opening > 0 ? min(100, round($used / $opening * 100)) : 0;
+                $closingColor = $closing < 0 ? '#ef4444' : ($closing > 0 ? '#10b981' : 'var(--ems-text-muted,#6b7280)');
+            ?>
+            <div class="py-2" style="border-bottom:1px solid var(--ems-border,#e2e8f0)">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="small fw-semibold"><?= e($b['leave_type']) ?></span>
+                    <span class="small fw-bold" style="color:<?= $closingColor ?>"><?= number_format($closing, 1) ?> left</span>
+                </div>
+                <div class="d-flex gap-3 small text-muted mb-1" style="font-size:.75rem">
+                    <span>Opening <strong class="text-body"><?= number_format($opening, 1) ?></strong></span>
+                    <span>Used <strong class="text-danger"><?= number_format($used, 1) ?></strong></span>
+                    <?php if ($pending > 0): ?>
+                    <span>Pending <strong class="text-warning"><?= number_format($pending, 1) ?></strong></span>
+                    <?php endif; ?>
+                </div>
+                <?php if ($opening > 0): ?>
+                <div class="progress" style="height:4px;border-radius:2px;background:var(--ems-border,#e2e8f0)">
+                    <div class="progress-bar <?= $usedPct >= 100 ? 'bg-danger' : ($usedPct >= 75 ? 'bg-warning' : 'bg-primary') ?>"
+                         style="width:<?= $usedPct ?>%;border-radius:2px"></div>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+            </div>
+
+            <!-- Footer totals -->
+            <div class="d-flex justify-content-between mt-2 pt-1 small text-muted">
+                <span>Total opening: <strong class="text-body"><?= number_format($totalOpening, 1) ?></strong></span>
+                <span>Total used: <strong class="text-danger"><?= number_format($totalUsed, 1) ?></strong></span>
+            </div>
+        </div>
+    </div>
+    </a>
+</div>
+<?php endforeach; ?>
+</div>
+<style>
+.leave-balance-card:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,.12) !important;
+    transform: translateY(-2px);
+}
+a:hover .leave-balance-card .fw-semibold { color: var(--ems-primary, #3b82f6); }
+</style>
+<?php endif; ?>
 <?php endif; ?>
 
 <script>

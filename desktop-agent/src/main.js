@@ -1,8 +1,9 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, Notification, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, Notification, dialog, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
+const http = require('http');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
@@ -43,6 +44,8 @@ let sessionMeta = null;
 let lastSyncAt = null;
 let captureFailures = 0;
 let ackShownThisRun = false;
+let webConnectPollTimer = null;
+let silentReauthInProgress = false;
 
 // ── IPC handlers for the setup window ──────────────────────────────────────
 
@@ -60,6 +63,15 @@ ipcMain.handle('setup:login', async (_event, { email, password }) => {
     return { success: true };
   } catch (err) {
     store.delete('accessToken');
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('setup:web-connect', async () => {
+  try {
+    await startWebConnect();
+    return { success: true, message: 'Opening browser — approve the connection there.' };
+  } catch (err) {
     return { success: false, message: err.message };
   }
 });
@@ -196,6 +208,96 @@ function showSetupWindow() {
   setupWin.setMenuBarVisibility(false);
   setupWin.loadFile(path.join(__dirname, 'setup.html'));
   setupWin.on('closed', () => { setupWin = null; });
+}
+
+// ── Web-session connect (no password) ────────────────────────────────────────
+
+async function startWebConnect() {
+  const uid = deviceUid();
+  const url = `${API_BASE}/employee/monitoring/agent-connect?device_uid=${encodeURIComponent(uid)}`;
+  shell.openExternal(url);
+
+  if (webConnectPollTimer) clearInterval(webConnectPollTimer);
+  let attempts = 0;
+  const maxAttempts = 40; // 40 × 3s = 2 minutes
+
+  webConnectPollTimer = setInterval(async () => {
+    attempts++;
+    if (attempts > maxAttempts) {
+      clearInterval(webConnectPollTimer);
+      webConnectPollTimer = null;
+      if (setupWin && !setupWin.isDestroyed()) {
+        setupWin.webContents.send('web-connect:timeout');
+      }
+      return;
+    }
+
+    try {
+      // Poll status — no auth token needed
+      const status = await fetch(`${API_BASE}/api/monitoring/auth/web-token-status?device_uid=${encodeURIComponent(uid)}`, {
+        headers: { Accept: 'application/json' },
+      });
+      const statusData = await status.json().catch(() => ({}));
+      if (!statusData.data?.ready) return; // not ready yet — keep polling
+
+      // Token ready — exchange it
+      clearInterval(webConnectPollTimer);
+      webConnectPollTimer = null;
+
+      const data = await api('/api/monitoring/auth/web-token-exchange', {
+        method: 'POST',
+        body: {
+          device_uid:    uid,
+          hostname:      os.hostname(),
+          os_name:       process.platform,
+          os_version:    os.release(),
+          agent_version: AGENT_VERSION,
+        },
+      });
+      const accessToken = data.data?.access_token;
+      if (!accessToken) throw new Error('No access token returned.');
+      store.set('accessToken', accessToken);
+      // If credentials were previously set by password, clear password — web auth is now active
+      if (data.data?.employee) store.delete('password');
+
+      if (setupWin && !setupWin.isDestroyed()) {
+        setupWin.webContents.send('web-connect:success');
+        setTimeout(() => {
+          if (setupWin && !setupWin.isDestroyed()) { setupWin.close(); setupWin = null; }
+        }, 1500);
+      }
+      refreshTrayMenu();
+    } catch (err) {
+      clearInterval(webConnectPollTimer);
+      webConnectPollTimer = null;
+      if (setupWin && !setupWin.isDestroyed()) {
+        setupWin.webContents.send('web-connect:error', err.message);
+      }
+    }
+  }, 3000);
+}
+
+// ── Silent re-authentication ─────────────────────────────────────────────────
+
+async function silentReauth() {
+  if (silentReauthInProgress) return;
+  silentReauthInProgress = true;
+  try {
+    const email    = store.get('email');
+    const password = store.get('password');
+    if (email && password) {
+      store.delete('accessToken');
+      await loginAndRegister();
+    } else {
+      showSetupWindow();
+    }
+  } catch (err) {
+    // Credentials no longer valid — ask the employee to sign in again
+    store.delete('accessToken');
+    showSetupWindow();
+  } finally {
+    silentReauthInProgress = false;
+  }
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -445,10 +547,11 @@ async function heartbeat() {
     refreshTrayMenu();
   } catch (err) {
     if (err.code === 'AUTH_FAILED' || err.status === 401) {
-      store.delete('accessToken');
-      showSetupWindow();
+      // Token expired — try silent re-login before showing the setup window
+      await silentReauth();
     } else if (err.code === 'DEVICE_NOT_APPROVED') {
-      notifyActionRequired(err);
+      // Device pending/revoked — try silent re-login (re-login auto-approves pending devices)
+      await silentReauth();
     } else if (err.code === 'POLICY_ACKNOWLEDGEMENT_REQUIRED') {
       await showPolicyAckIfNeeded(true, err.data).catch(() => notifyActionRequired(err));
     }
@@ -498,12 +601,15 @@ app.whenReady().then(async () => {
   createTray();
   setTrayLabel('Monitoring Stopped');
 
-  const email = store.get('email');
+  const email    = store.get('email');
   const password = store.get('password');
-  if (!email || !password) {
-    // First run — show login window
+  const hasToken = !!store.get('accessToken');
+
+  if (!email && !hasToken) {
+    // First run — show login window (no stored credentials or token)
     showSetupWindow();
-  } else {
+  } else if (email && password) {
+    // Always refresh token on startup using stored credentials
     try {
       await loginAndRegister();
     } catch (err) {
@@ -511,9 +617,15 @@ app.whenReady().then(async () => {
         store.delete('accessToken');
         showSetupWindow();
       } else {
+        // Network error etc — keep existing token and retry on next heartbeat
         notifyActionRequired(err);
       }
     }
+  } else if (hasToken) {
+    // Have a token but no stored password (web-connected) — use token as-is, heartbeat will re-auth if expired
+    refreshTrayMenu();
+  } else {
+    showSetupWindow();
   }
 
   heartbeatTimer = setInterval(() => heartbeat(), 60_000);
@@ -527,4 +639,5 @@ app.on('before-quit', () => {
   clearInterval(heartbeatTimer);
   clearInterval(screenshotTimer);
   clearInterval(activityTimer);
+  if (webConnectPollTimer) clearInterval(webConnectPollTimer);
 });

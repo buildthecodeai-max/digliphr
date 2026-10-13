@@ -10,7 +10,8 @@
     "start": "electron .",
     "dev": "electron . --enable-logging",
     "dist": "electron-builder --win --publish never",
-    "dist:mac": "electron-builder --mac --publish never"
+    "dist:mac": "electron-builder --mac --publish never",
+    "postinstall": "node scripts/codesign-electron.js"
   },
   "dependencies": {
     "electron-store": "^8.2.0",

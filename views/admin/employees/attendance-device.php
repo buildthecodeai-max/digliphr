@@ -7,17 +7,18 @@ foreach ($devices as $device) {
 }
 $mode = (string) ($securitySettings['attendance_security_mode'] ?? 'device_only');
 ?>
-<div class="container-fluid py-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <div>
-            <a class="small text-decoration-none" href="/admin/employees/<?= (int) $employee['id'] ?>">← Back to employee</a>
-            <h1 class="h4 mb-1 mt-2">Attendance Device</h1>
-            <p class="text-secondary small mb-0"><?= e($employee['employee_name']) ?> · <?= e($employee['employee_code']) ?></p>
-        </div>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1>Attendance Device</h1>
+        <p class="subtitle"><?= e($employee['employee_name']) ?> · <?= e($employee['employee_code']) ?></p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-soft btn-sm" href="/admin/employees/<?= (int) $employee['id'] ?>"><i data-lucide="arrow-left" style="width:14px;height:14px" class="me-1"></i>Back to employee</a>
         <?php if (can('attendance.security.settings')): ?>
-            <a class="btn btn-soft btn-sm" href="/admin/settings"><i data-lucide="shield-check" class="me-1"></i>Security Settings</a>
+            <a class="btn btn-soft btn-sm" href="/admin/settings"><i data-lucide="settings" style="width:14px;height:14px" class="me-1"></i>Security Settings</a>
         <?php endif; ?>
     </div>
+</div>
 
     <?php include config('app.paths.views') . '/partials/alerts.php'; ?>
 
@@ -90,4 +91,3 @@ $mode = (string) ($securitySettings['attendance_security_mode'] ?? 'device_only'
             </table>
         </div>
     </div>
-</div>

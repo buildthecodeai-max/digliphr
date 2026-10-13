@@ -168,6 +168,8 @@ $router->group(['prefix' => '/admin', 'middleware' => [AuthMiddleware::class, Ad
     // Attendance — static paths before {id}
     $router->get('/attendance', ['Admin\\AttendanceController', 'index']);
     $router->get('/attendance/overview', ['Admin\\WorkspaceOverviewController', 'attendance']);
+    $router->get('/attendance/remote', ['Admin\\AttendanceController', 'remote']);
+    $router->post('/attendance/{id}/mark-remote', ['Admin\\AttendanceController', 'markRemote'], [CsrfMiddleware::class]);
     $router->get('/attendance/archived', ['Admin\\AttendanceController', 'archived']);
     $router->get('/attendance/corrections', ['Admin\\AttendanceController', 'corrections']);
     $router->post('/attendance/corrections/{id}/approve', ['Admin\\AttendanceController', 'approveCorrection'], [CsrfMiddleware::class]);
@@ -188,6 +190,7 @@ $router->group(['prefix' => '/admin', 'middleware' => [AuthMiddleware::class, Ad
     $router->post('/attendance/{id}/approve', ['Admin\\AttendanceController', 'approve'], [CsrfMiddleware::class]);
     $router->post('/attendance/{id}/reject', ['Admin\\AttendanceController', 'reject'], [CsrfMiddleware::class]);
     $router->post('/attendance/{id}/correct', ['Admin\\AttendanceController', 'correct'], [CsrfMiddleware::class]);
+    $router->post('/attendance/{id}/merge-next', ['Admin\\AttendanceController', 'mergeNext'], [CsrfMiddleware::class]);
 
     // Leave — static paths before {id}
     $router->get('/leave', ['Admin\\LeaveController', 'index']);
@@ -205,8 +208,15 @@ $router->group(['prefix' => '/admin', 'middleware' => [AuthMiddleware::class, Ad
     $router->post('/leave/types/{id}/delete', ['Admin\\LeaveController', 'destroyType'], [CsrfMiddleware::class]);
     $router->get('/leave/balances', ['Admin\\LeaveController', 'balances']);
     $router->post('/leave/balances', ['Admin\\LeaveController', 'updateBalance'], [CsrfMiddleware::class]);
+    $router->post('/leave/log-past-dates', ['Admin\\LeaveController', 'logPastLeave'], [CsrfMiddleware::class]);
+    $router->post('/leave/balances/sync-used', ['Admin\\LeaveController', 'syncUsedFromLeaves'], [CsrfMiddleware::class]);
     $router->get('/leave/allocate', ['Admin\\LeaveController', 'allocate']);
     $router->post('/leave/allocate/run', ['Admin\\LeaveController', 'runAllocation'], [CsrfMiddleware::class]);
+    $router->get('/leave/planned-offs', ['Admin\\LeaveController', 'plannedOffs']);
+    $router->post('/leave/planned-offs', ['Admin\\LeaveController', 'storePlannedOff'], [CsrfMiddleware::class]);
+    $router->post('/leave/planned-offs/{id}/delete', ['Admin\\LeaveController', 'destroyPlannedOff'], [CsrfMiddleware::class]);
+    $router->post('/leave/planned-offs/{id}/log-leave', ['Admin\\LeaveController', 'logPlannedOffAsLeave'], [CsrfMiddleware::class]);
+
     $router->get('/leave/holidays', ['Admin\\LeaveController', 'holidays']);
     $router->get('/leave/holidays/create', ['Admin\\LeaveController', 'createHoliday']);
     $router->post('/leave/holidays', ['Admin\\LeaveController', 'storeHoliday'], [CsrfMiddleware::class]);
@@ -221,6 +231,9 @@ $router->group(['prefix' => '/admin', 'middleware' => [AuthMiddleware::class, Ad
     $router->post('/leave/{id}/extend', ['Admin\\LeaveController', 'extend'], [CsrfMiddleware::class]);
     $router->post('/leave/{id}/cancel', ['Admin\\LeaveController', 'cancel'], [CsrfMiddleware::class]);
     $router->post('/leave/{id}/archive', ['Admin\\LeaveController', 'archive'], [CsrfMiddleware::class]);
+    $router->post('/leave/bulk-archive', ['Admin\\LeaveController', 'bulkArchive'], [CsrfMiddleware::class]);
+    $router->post('/leave/bulk-restore', ['Admin\\LeaveController', 'bulkRestore'], [CsrfMiddleware::class]);
+    $router->post('/leave/bulk-force-delete', ['Admin\\LeaveController', 'bulkForceDelete'], [CsrfMiddleware::class]);
     $router->post('/leave/{id}/restore', ['Admin\\LeaveController', 'restore'], [CsrfMiddleware::class]);
     $router->get('/leave/{id}/force-delete', ['Admin\\LeaveController', 'confirmForceDestroy']);
     $router->post('/leave/force-delete', ['Admin\\LeaveController', 'forceDestroy'], [CsrfMiddleware::class]);
@@ -401,6 +414,7 @@ $router->group(['prefix' => '/employee', 'middleware' => [AuthMiddleware::class,
     $router->get('/attendance', ['Employee\\AttendanceController', 'index']);
     $router->get('/attendance/calendar', ['Employee\\AttendanceController', 'calendar']);
     $router->get('/attendance/corrections', ['Employee\\AttendanceController', 'corrections']);
+    $router->post('/attendance/corrections', ['Employee\\AttendanceController', 'corrections'], [CsrfMiddleware::class]);
 
     $router->get('/leave', ['Employee\\LeaveController', 'index']);
     $router->get('/leave/create', ['Employee\\LeaveController', 'create']);
@@ -423,6 +437,7 @@ $router->group(['prefix' => '/employee', 'middleware' => [AuthMiddleware::class,
     $router->get('/monitoring/devices', ['Employee\\MonitoringController', 'forbidden']);
     $router->get('/monitoring/policy', ['Employee\\MonitoringController', 'forbidden']);
     $router->get('/monitoring/acknowledgements', ['Employee\\MonitoringController', 'forbidden']);
+    $router->get('/monitoring/agent-connect', ['Employee\\MonitoringController', 'agentConnect']);
 
     $router->get('/profile', ['Employee\\ProfileController', 'index']);
     $router->post('/profile', ['Employee\\ProfileController', 'update'], [CsrfMiddleware::class]);
@@ -440,4 +455,8 @@ $router->group(['prefix' => '/employee', 'middleware' => [AuthMiddleware::class,
     // QR punch
     $router->get('/qr-punch', ['Employee\\QrPunchController', 'show']);
     $router->post('/qr-punch', ['Employee\\QrPunchController', 'punch'], [CsrfMiddleware::class]);
+
+    // Live timeclock widget
+    $router->get('/timeclock/status', ['Employee\\TimeclockController', 'status']);
+    $router->post('/timeclock/action', ['Employee\\TimeclockController', 'action'], [CsrfMiddleware::class]);
 });

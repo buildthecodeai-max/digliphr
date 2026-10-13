@@ -125,6 +125,79 @@ class AttendanceController extends Controller
         ]);
     }
 
+    public function remote(): void
+    {
+        $this->authorize('attendance.view');
+
+        $archived = $this->request->input('archived') ? 1 : 0;
+
+        $filters = [
+            'company_id'    => $this->tenant->resolveCompanyId($this->request->input('company_id')),
+            'department_id' => $this->request->input('department_id'),
+            'branch_id'     => $this->request->input('branch_id'),
+            'date_from'     => $this->request->input('date_from', date('Y-m-01')),
+            'date_to'       => $this->request->input('date_to', date('Y-m-d')),
+            'q'             => $this->request->input('q'),
+        ];
+        $filters = array_filter($filters, fn ($v) => $v !== null && $v !== '');
+        if ($archived) {
+            $filters['archived'] = 1;
+        }
+
+        $employeeId = (int) $this->request->input('employee_id', 0);
+
+        // Employee drilldown: show individual records for one employee
+        if ($employeeId > 0) {
+            $empFilters = $filters + ['employee_id' => $employeeId, 'status' => 'remote'];
+            if ($archived) { $empFilters['archived'] = 1; }
+            $page       = max(1, (int) $this->request->input('page', 1));
+            $records    = $this->attendance->search($empFilters, $page, 20);
+
+            $emp = (new Employee())->find($employeeId);
+
+            $this->view('admin/attendance/remote', [
+                'title'       => 'Remote Work',
+                'mode'        => 'employee',
+                'employee'    => $emp,
+                'records'     => $records,
+                'filters'     => $filters,
+                'employeeId'  => $employeeId,
+                'archived'    => $archived,
+                'departments' => (new Department())->all('name'),
+                'branches'    => (new Branch())->withCompany(),
+            ]);
+            return;
+        }
+
+        // Summary view: one row per employee
+        $byEmployee = $this->attendance->remoteByEmployee($filters);
+
+        $this->view('admin/attendance/remote', [
+            'title'       => 'Remote Work',
+            'mode'        => 'summary',
+            'byEmployee'  => $byEmployee,
+            'filters'     => $filters,
+            'archived'    => $archived,
+            'departments' => (new Department())->all('name'),
+            'branches'    => (new Branch())->withCompany(),
+        ]);
+    }
+
+    public function markRemote(int $id): void
+    {
+        $this->authorize('attendance.edit');
+        $record = $this->assertAttendanceAccess($id);
+
+        $this->attendance->update($id, [
+            'status'              => 'remote',
+            'is_remote'           => 1,
+            'verification_status' => 'verified',
+        ]);
+
+        Session::flash('success', 'Attendance #' . $id . ' moved to Remote Work.');
+        $this->redirect('/admin/attendance/' . $id);
+    }
+
     public function archived(): void
     {
         $this->authorize('attendance.view_archived');
@@ -601,6 +674,51 @@ class AttendanceController extends Controller
         }
 
         return $map;
+    }
+
+    public function mergeNext(int $id): void
+    {
+        $this->authorize('attendance.edit');
+        $record = $this->assertAttendanceAccess($id);
+
+        $db = $this->attendance->db();
+
+        // Find the immediately next attendance record for the same employee
+        $next = $db->fetch(
+            'SELECT * FROM attendance
+             WHERE employee_id = :emp AND attendance_date > :d AND deleted_at IS NULL
+             ORDER BY attendance_date ASC LIMIT 1',
+            ['emp' => (int) $record['employee_id'], 'd' => $record['attendance_date']]
+        );
+
+        if (!$next) {
+            Session::flash('error', 'No next attendance record found for this employee to merge with.');
+            $this->redirect('/admin/attendance/' . $id);
+            return;
+        }
+
+        $nextId = (int) $next['id'];
+
+        // Move all sessions from the next record to the current record
+        $db->query(
+            'UPDATE attendance_sessions SET attendance_id = :cur, updated_at = NOW() WHERE attendance_id = :nxt',
+            ['cur' => $id, 'nxt' => $nextId]
+        );
+
+        // Re-open the current record (clear checkout so employee can continue)
+        $db->query(
+            'UPDATE attendance SET check_out_at = NULL, work_minutes = 0, updated_at = NOW() WHERE id = :id',
+            ['id' => $id]
+        );
+
+        // Soft-delete the next record
+        $db->query(
+            "UPDATE attendance SET deleted_at = NOW(), updated_at = NOW() WHERE id = :id",
+            ['id' => $nextId]
+        );
+
+        Session::flash('success', 'Records merged. The next-day record has been removed and the session is now continuous.');
+        $this->redirect('/admin/attendance/' . $id);
     }
 
     private function assertAttendanceAccess(int $id, bool $includingArchived = false): array

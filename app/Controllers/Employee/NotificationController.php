@@ -13,12 +13,7 @@ class NotificationController extends Controller
     {
         $userId = $this->user()['id'] ?? 0;
         $rows = Database::getInstance()->fetchAll(
-            'SELECT * FROM notifications WHERE user_id = :uid ORDER BY created_at DESC LIMIT 100',
-            ['uid' => $userId]
-        );
-
-        Database::getInstance()->query(
-            'UPDATE notifications SET is_read = 1, read_at = NOW() WHERE user_id = :uid AND is_read = 0',
+            'SELECT * FROM notifications WHERE user_id = :uid ORDER BY created_at DESC LIMIT 300',
             ['uid' => $userId]
         );
 

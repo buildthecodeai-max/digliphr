@@ -1,10 +1,10 @@
-<div class="container-fluid py-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h1 class="h4 mb-1"><?= e($title ?? 'Employee Documents') ?></h1>
-            <p class="text-muted small mb-0">Upload and manage employee HR documents</p>
-        </div>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+        <h1><?= e($title ?? 'Employee Documents') ?></h1>
+        <p class="subtitle">Upload and manage employee HR documents</p>
     </div>
+</div>
+<div>
 
     <?php include config('app.paths.views') . '/partials/alerts.php'; ?>
 
@@ -12,7 +12,7 @@
         <?php if (can('documents.manage')): ?>
         <div class="col-lg-4">
             <div class="card shadow-sm">
-                <div class="card-header bg-white py-2"><strong>Upload Document</strong></div>
+                <div class="card-header py-2"><strong>Upload Document</strong></div>
                 <div class="card-body">
                     <form method="post" action="/admin/documents" enctype="multipart/form-data">
                         <?= csrf_field() ?>

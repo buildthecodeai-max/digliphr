@@ -1,8 +1,8 @@
 <script>
 (function () {
     try {
-        var mode = localStorage.getItem('ems-theme-mode') || 'light';
-        var accent = localStorage.getItem('ems-accent') || 'indigo';
+        var mode = localStorage.getItem('ems-theme-mode') || 'dark';
+        var accent = localStorage.getItem('ems-accent') || 'teal';
         var aliases = { cyan: 'navy', blue: 'indigo', green: 'forest' };
         var valid = { teal: 1, navy: 1, forest: 1, indigo: 1 };
         accent = aliases[accent] || accent;

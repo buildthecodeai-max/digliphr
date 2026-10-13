@@ -9,16 +9,15 @@
 $correctMode = $correctMode ?? false;
 $id = (int) $record['id'];
 ?>
-<div class="container-fluid py-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <div>
-            <h1 class="h4 mb-1">Attendance Details</h1>
-            <p class="text-muted small mb-0">
-                <?= e($record['employee_name'] ?? '') ?> · <?= e(format_date($record['attendance_date'])) ?>
-            </p>
-        </div>
-        <a href="/admin/attendance" class="btn btn-outline-secondary btn-sm">&larr; Back</a>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1>Attendance Details</h1>
+        <p class="subtitle"><?= e($record['employee_name'] ?? '') ?> · <?= e(format_date($record['attendance_date'])) ?></p>
     </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/admin/attendance" class="btn btn-soft btn-sm"><i data-lucide="arrow-left" style="width:14px;height:14px" class="me-1"></i>Back</a>
+    </div>
+</div>
 
     <?php include config('app.paths.views') . '/partials/alerts.php'; ?>
 
@@ -136,6 +135,29 @@ $id = (int) $record['id'];
 
         <div class="col-lg-4">
             <?php $isArchived = $isArchived ?? !empty($record['deleted_at']); ?>
+            <?php if (!$isArchived && can('attendance.edit') && ($record['status'] ?? '') !== 'remote'): ?>
+            <div class="card shadow-sm mb-3 border-info">
+                <div class="card-body py-2">
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                        <div>
+                            <div class="fw-semibold small">
+                                <i data-lucide="wifi" style="width:14px;height:14px" class="me-1 text-info"></i>
+                                Convert to Remote Work
+                            </div>
+                            <div class="text-muted" style="font-size:.78rem">
+                                Move this attendance record to Remote Work. Status will be set to <em>Remote</em> and verification cleared.
+                            </div>
+                        </div>
+                        <form method="POST" action="/admin/attendance/<?= $id ?>/mark-remote" onsubmit="return confirm('Move this attendance to Remote Work?')">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-sm btn-outline-info text-nowrap">
+                                <i data-lucide="wifi" style="width:13px;height:13px" class="me-1"></i>Mark Remote
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
             <?php if (!$isArchived && ($correctMode || can('attendance.correct') || can('attendance.edit') || can('attendance.archive') || can('attendance.approve') || can('attendance.reject'))): ?>
             <div class="card shadow-sm mb-3" id="edit">
                 <div class="card-header bg-white py-2"><strong><?= $correctMode ? 'Correct Attendance' : 'Edit Attendance' ?></strong></div>
@@ -238,6 +260,18 @@ $id = (int) $record['id'];
                     </form>
                     <?php endif; ?>
 
+                    <?php if (can('attendance.edit') && empty($record['check_out_at']) === false): ?>
+                    <hr class="my-2">
+                    <form method="post" action="/admin/attendance/<?= $id ?>/merge-next" data-confirm="Merge this record with the next attendance record? The next record's sessions will be moved here and that record will be archived.">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="btn btn-outline-warning btn-sm w-100">
+                            <i data-lucide="git-merge" style="width:14px;height:14px" class="me-1"></i>Merge with Next Record
+                        </button>
+                        <div class="text-muted small mt-1">Use when an employee accidentally checked out and checked back in — merges the two records into one continuous session.</div>
+                    </form>
+                    <hr class="my-2">
+                    <?php endif; ?>
+
                     <?php if (can('attendance.approve') && ($record['verification_status'] ?? '') !== 'verified'): ?>
                     <form method="post" action="/admin/attendance/<?= $id ?>/approve" class="mb-2">
                         <?= csrf_field() ?>
@@ -325,4 +359,3 @@ $id = (int) $record['id'];
             </div>
         </div>
     </div>
-</div>

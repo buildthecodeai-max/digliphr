@@ -20,27 +20,27 @@ class WorkspaceOverviewController extends Controller
         $metrics = [
             [
                 'label' => 'Present Today',
-                'value' => number_format($this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status IN ("present","late","remote","manual") AND deleted_at IS NULL')),
-                'sub' => 'Checked in',
-                'href' => '/admin/attendance?date=' . date('Y-m-d'),
+                'value' => number_format($this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status = "present" AND deleted_at IS NULL')),
+                'sub' => 'On time',
+                'href' => '/admin/attendance?status=present&date_from=' . date('Y-m-d') . '&date_to=' . date('Y-m-d'),
                 'tone' => 'mint',
                 'icon' => 'user-check',
+            ],
+            [
+                'label' => 'Late Today',
+                'value' => number_format($this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status = "late" AND deleted_at IS NULL')),
+                'sub' => 'Checked in late',
+                'href' => '/admin/attendance?status=late&date_from=' . date('Y-m-d') . '&date_to=' . date('Y-m-d'),
+                'tone' => 'orange',
+                'icon' => 'clock-alert',
             ],
             [
                 'label' => 'Absent Today',
                 'value' => number_format($this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status = "absent" AND deleted_at IS NULL')),
                 'sub' => 'Marked absent',
-                'href' => '/admin/attendance?status=absent&date=' . date('Y-m-d'),
+                'href' => '/admin/attendance?status=absent&date_from=' . date('Y-m-d') . '&date_to=' . date('Y-m-d'),
                 'tone' => 'red',
                 'icon' => 'user-x',
-            ],
-            [
-                'label' => 'Pending Corrections',
-                'value' => number_format($this->pendingCorrections($db)),
-                'sub' => 'Awaiting review',
-                'href' => '/admin/attendance/corrections',
-                'tone' => 'orange',
-                'icon' => 'clipboard-pen',
             ],
             [
                 'label' => 'On Leave Today',
@@ -84,9 +84,9 @@ class WorkspaceOverviewController extends Controller
                 'icon' => 'hourglass',
             ],
             [
-                'label' => 'Approved',
-                'value' => number_format($this->tenantCount($db, 'leave_requests', 'status = "approved" AND deleted_at IS NULL AND end_date >= CURDATE()')),
-                'sub' => 'Upcoming / active',
+                'label' => 'Days Taken',
+                'value' => number_format($this->tenantSum($db, 'leave_requests', 'chargeable_days', 'status = "approved" AND deleted_at IS NULL AND chargeable_days > 0 AND YEAR(start_date) = YEAR(CURDATE())'), 1),
+                'sub' => 'Approved days this year',
                 'href' => '/admin/leave/approved',
                 'tone' => 'mint',
                 'icon' => 'check-circle',
@@ -192,6 +192,20 @@ class WorkspaceOverviewController extends Controller
         $scope = $this->tenant->sql('company_id', 'workspace_count_' . $table);
         return (int) $db->fetchColumn(
             'SELECT COUNT(*) FROM ' . $table . ' WHERE ' . $condition . ' AND (' . $scope['sql'] . ')',
+            $scope['params']
+        );
+    }
+
+    private function tenantSum(Database $db, string $table, string $column, string $condition): float
+    {
+        $allowed = ['attendance', 'leave_requests', 'leave_types', 'payroll_periods', 'loans'];
+        if (!in_array($table, $allowed, true)) {
+            throw new \InvalidArgumentException('Unsupported workspace table.');
+        }
+        $safeCol = preg_replace('/[^a-z_]/', '', $column);
+        $scope = $this->tenant->sql('company_id', 'workspace_sum_' . $table);
+        return (float) $db->fetchColumn(
+            'SELECT COALESCE(SUM(' . $safeCol . '), 0) FROM ' . $table . ' WHERE ' . $condition . ' AND (' . $scope['sql'] . ')',
             $scope['params']
         );
     }

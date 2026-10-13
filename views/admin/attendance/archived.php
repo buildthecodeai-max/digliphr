@@ -8,19 +8,18 @@
 $query = http_build_query(array_filter($filters, static fn ($v, $k) => $k !== 'archived' && $v !== null && $v !== '', ARRAY_FILTER_USE_BOTH));
 $forceDeleteModals = [];
 ?>
-<div class="container-fluid py-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <div>
-            <h1 class="h4 mb-0">Archived Attendance</h1>
-            <p class="text-muted small mb-0">Soft-deleted attendance records retained for audit</p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="/admin/attendance" class="btn btn-outline-secondary btn-sm">Active Attendance</a>
-            <?php if (can('attendance.export')): ?>
-            <a href="/admin/attendance/export?archived=1&amp;<?= e($query) ?>" class="btn btn-outline-secondary btn-sm">Export CSV</a>
-            <?php endif; ?>
-        </div>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1>Archived Attendance</h1>
+        <p class="subtitle">Browse archived attendance records</p>
     </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/admin/attendance" class="btn btn-soft btn-sm">Active Attendance</a>
+        <?php if (can('attendance.export')): ?>
+        <a href="/admin/attendance/export?archived=1&amp;<?= e($query) ?>" class="btn btn-soft btn-sm"><i data-lucide="download" style="width:14px;height:14px" class="me-1"></i>Export CSV</a>
+        <?php endif; ?>
+    </div>
+</div>
 
     <?php include config('app.paths.views') . '/partials/alerts.php'; ?>
 
@@ -173,7 +172,6 @@ $forceDeleteModals = [];
         </div>
         <?php endif; ?>
     </div>
-</div>
 
 <?php if (!empty($forceDeleteModals)): ?>
 <?php foreach ($forceDeleteModals as $modal): ?>

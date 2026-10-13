@@ -38,7 +38,6 @@ return [
                 'icon' => 'messages-square',
                 'url' => '/chat',
                 'perm' => 'chat.access',
-                'accent' => 'pink',
                 'badge' => 'chat_unread',
                 'match' => ['/chat', '/admin/chat'],
                 'children' => [
@@ -68,6 +67,7 @@ return [
                     ['label' => 'All Attendance', 'url' => '/admin/attendance', 'perm' => 'attendance.view', 'match' => 'list'],
                     ['label' => 'Corrections', 'url' => '/admin/attendance/corrections', 'perm' => 'attendance.correct'],
                     ['label' => 'Manual Entry', 'url' => '/admin/attendance/manual', 'perm' => 'attendance.manual'],
+                    ['label' => 'Remote Work', 'url' => '/admin/attendance/remote', 'perm' => 'attendance.view'],
                     ['label' => 'Archived', 'url' => '/admin/attendance/archived', 'perm' => 'attendance.view_archived'],
                     ['label' => 'Shifts', 'url' => '/admin/shifts', 'perm' => 'shifts.view'],
                     ['label' => 'Weekly Patterns', 'url' => '/admin/week-patterns', 'perm' => 'attendance.pattern.view'],
@@ -93,6 +93,7 @@ return [
                     ['label' => 'Types', 'url' => '/admin/leave/types', 'perm' => 'leave.types'],
                     ['label' => 'Balances', 'url' => '/admin/leave/balances', 'perm' => 'leave.balances'],
                     ['label' => 'Holidays', 'url' => '/admin/leave/holidays', 'perm' => 'holidays.view'],
+                    ['label' => 'Planned Offs', 'url' => '/admin/leave/planned-offs', 'perm' => 'leave.view'],
                 ],
             ],
             [
@@ -271,7 +272,6 @@ return [
                 'icon' => 'messages-square',
                 'url' => '/chat',
                 'perm' => 'chat.access',
-                'accent' => 'pink',
                 'badge' => 'chat_unread',
                 'match' => ['/chat'],
                 'children' => [

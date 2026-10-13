@@ -10,8 +10,10 @@ use App\Models\Holiday;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
+use App\Models\PlannedOffDay;
 use App\Services\AuditService;
 use App\Services\LeaveService;
+use App\Services\NotificationService;
 use RuntimeException;
 
 class LeaveController extends Controller
@@ -22,6 +24,7 @@ class LeaveController extends Controller
     private Holiday $holidays;
     private LeaveService $leaveService;
     private Employee $employees;
+    private PlannedOffDay $plannedOffs;
 
     public function __construct($request, $response)
     {
@@ -32,6 +35,7 @@ class LeaveController extends Controller
         $this->holidays = new Holiday();
         $this->leaveService = new LeaveService();
         $this->employees = new Employee();
+        $this->plannedOffs = new PlannedOffDay();
     }
 
     public function index(): void
@@ -191,6 +195,82 @@ class LeaveController extends Controller
         $this->redirect('/admin/leave/' . $id);
     }
 
+    public function bulkArchive(): void
+    {
+        $this->authorize('leave.archive');
+
+        $ids    = array_filter(array_map('intval', (array) $this->request->input('ids', [])));
+        $reason = trim((string) $this->request->input('reason', ''));
+        $userId = (int) $this->user()['id'];
+
+        if (empty($ids)) {
+            flash('error', 'No leave requests selected.');
+            $this->redirect('/admin/leave');
+            return;
+        }
+        if ($reason === '') {
+            flash('error', 'Archive reason is required.');
+            $this->redirect('/admin/leave');
+            return;
+        }
+
+        $done = 0;
+        $errors = [];
+        foreach ($ids as $id) {
+            try {
+                $this->assertLeaveAccess($id);
+                $this->leaveService->archive($id, $reason, $userId);
+                $done++;
+            } catch (RuntimeException $e) {
+                $errors[] = '#' . $id . ': ' . $e->getMessage();
+            }
+        }
+
+        if ($done > 0) {
+            flash('success', $done . ' leave request(s) archived.' . ($errors ? ' Some failed — see warnings.' : ''));
+        }
+        foreach ($errors as $err) {
+            flash('warning', $err);
+        }
+
+        $this->redirect('/admin/leave');
+    }
+
+    public function bulkRestore(): void
+    {
+        $this->authorize('leave.restore');
+
+        $ids    = array_filter(array_map('intval', (array) $this->request->input('ids', [])));
+        $userId = (int) $this->user()['id'];
+
+        if (empty($ids)) {
+            flash('error', 'No leave requests selected.');
+            $this->redirect('/admin/leave/archived');
+            return;
+        }
+
+        $done   = 0;
+        $errors = [];
+        foreach ($ids as $id) {
+            try {
+                $this->assertLeaveAccess($id, true);
+                $this->leaveService->restoreArchived($id, $userId);
+                $done++;
+            } catch (RuntimeException $e) {
+                $errors[] = '#' . $id . ': ' . $e->getMessage();
+            }
+        }
+
+        if ($done > 0) {
+            flash('success', $done . ' leave request(s) restored.' . ($errors ? ' Some failed — see warnings.' : ''));
+        }
+        foreach ($errors as $err) {
+            flash('warning', $err);
+        }
+
+        $this->redirect('/admin/leave/archived');
+    }
+
     public function restore(int $id): void
     {
         $this->authorize('leave.restore');
@@ -203,6 +283,47 @@ class LeaveController extends Controller
             return;
         } catch (RuntimeException $e) {
             flash('error', $e->getMessage());
+        }
+
+        $this->redirect('/admin/leave/archived');
+    }
+
+    public function bulkForceDelete(): void
+    {
+        $this->authorize('leave.permanently_delete');
+
+        $ids    = array_filter(array_map('intval', (array) $this->request->input('ids', [])));
+        $reason = trim((string) $this->request->input('reason', ''));
+        $userId = (int) $this->user()['id'];
+
+        if (empty($ids)) {
+            flash('error', 'No leave requests selected.');
+            $this->redirect('/admin/leave/archived');
+            return;
+        }
+        if ($reason === '') {
+            flash('error', 'Deletion reason is required.');
+            $this->redirect('/admin/leave/archived');
+            return;
+        }
+
+        $done   = 0;
+        $errors = [];
+        foreach ($ids as $id) {
+            try {
+                $this->assertLeaveAccess($id, true);
+                $this->leaveService->permanentlyDelete($id, $reason, $userId);
+                $done++;
+            } catch (RuntimeException $e) {
+                $errors[] = '#' . $id . ': ' . $e->getMessage();
+            }
+        }
+
+        if ($done > 0) {
+            flash('success', $done . ' leave request(s) permanently deleted.' . ($errors ? ' Some failed — see warnings.' : ''));
+        }
+        foreach ($errors as $err) {
+            flash('warning', $err);
         }
 
         $this->redirect('/admin/leave/archived');
@@ -509,9 +630,26 @@ class LeaveController extends Controller
         $year = (int) $this->request->input('year', (int) date('Y'));
         $balances = $employeeId ? $this->leaveBalances->forEmployee($employeeId, $year) : [];
 
+        // Compute actual used days per leave type from approved leave requests
+        $actualUsed = [];
+        if ($employeeId && $balances) {
+            $rows = $this->leaveBalances->db()->fetchAll(
+                "SELECT leave_type_id, COALESCE(SUM(chargeable_days), 0) AS actual_used
+                 FROM leave_requests
+                 WHERE employee_id = :emp AND status = 'approved' AND deleted_at IS NULL
+                   AND YEAR(start_date) = :yr AND chargeable_days > 0
+                 GROUP BY leave_type_id",
+                ['emp' => $employeeId, 'yr' => $year]
+            );
+            foreach ($rows as $r) {
+                $actualUsed[(int) $r['leave_type_id']] = round((float) $r['actual_used'], 2);
+            }
+        }
+
         $this->view('admin.leave.balances', [
             'title' => 'Leave Balances',
             'balances' => $balances,
+            'actualUsed' => $actualUsed,
             'employeeId' => $employeeId,
             'year' => $year,
             'employees' => $this->employees->raw(
@@ -529,14 +667,15 @@ class LeaveController extends Controller
         $this->authorize('leave.balances');
 
         $data = $this->validate([
-            'employee_id' => 'required|exists:employees,id',
-            'leave_type_id' => 'required|exists:leave_types,id',
-            'year' => 'required|integer',
-            'opening_balance' => 'nullable|numeric|min:0',
-            'accrued' => 'nullable|numeric|min:0',
-            'adjusted' => 'nullable|numeric',
-            'used' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|max:500',
+            'employee_id'              => 'required|exists:employees,id',
+            'leave_type_id'            => 'required|exists:leave_types,id',
+            'year'                     => 'required|integer',
+            'opening_balance'          => 'nullable|numeric|min:0',
+            'accrued'                  => 'nullable|numeric|min:0',
+            'adjusted'                 => 'nullable|numeric',
+            'used'                     => 'nullable|numeric|min:0',
+            'closing_balance_override' => 'nullable|numeric',
+            'notes'                    => 'nullable|max:500',
         ]);
         $employee = $this->tenant->employee((int) $data['employee_id']);
         $leaveType = $this->tenant->record('leave_types', (int) $data['leave_type_id']);
@@ -560,11 +699,144 @@ class LeaveController extends Controller
         if (isset($data['used']) && $data['used'] !== '') {
             $updates['used'] = (float) $data['used'];
         }
+
+        // When admin sets a target closing balance, store it directly and skip recalculation.
+        $closingOverride = $data['closing_balance_override'] ?? null;
+        $hasClosingOverride = $closingOverride !== null && $closingOverride !== '';
+        if ($hasClosingOverride) {
+            $updates['closing_balance'] = round((float) $closingOverride, 2);
+        }
+
         $this->leaveBalances->update((int) $balance['id'], $updates);
-        $this->leaveBalances->recalculateClosing((int) $balance['id']);
+        if (!$hasClosingOverride) {
+            $this->leaveBalances->recalculateClosing((int) $balance['id']);
+        }
 
         flash('success', 'Leave balance updated.');
         $this->redirect('/admin/leave/balances?employee_id=' . $data['employee_id'] . '&year=' . $data['year']);
+    }
+
+    public function syncUsedFromLeaves(): void
+    {
+        $this->authorize('leave.balances');
+
+        $employeeId  = (int) $this->request->input('employee_id', 0);
+        $leaveTypeId = (int) $this->request->input('leave_type_id', 0);
+        $year        = (int) $this->request->input('year', (int) date('Y'));
+
+        $this->tenant->employee($employeeId);
+
+        // Sum chargeable_days > 0 only — tracking-only leaves (chargeable_days=0) don't affect the balance
+        $row = $this->leaveBalances->db()->fetch(
+            "SELECT COALESCE(SUM(chargeable_days), 0) AS actual_used
+             FROM leave_requests
+             WHERE employee_id = :emp
+               AND leave_type_id = :lt
+               AND status = 'approved'
+               AND deleted_at IS NULL
+               AND chargeable_days > 0
+               AND YEAR(start_date) = :yr",
+            ['emp' => $employeeId, 'lt' => $leaveTypeId, 'yr' => $year]
+        );
+
+        $actualUsed = round((float) ($row['actual_used'] ?? 0), 2);
+        $balance    = $this->leaveBalances->ensureBalance($employeeId, $leaveTypeId, $year);
+
+        $this->leaveBalances->update((int) $balance['id'], ['used' => $actualUsed]);
+        $this->leaveBalances->recalculateClosing((int) $balance['id']);
+
+        flash('success', 'Used days synced to ' . $actualUsed . ' (from actual approved leave records).');
+        $this->redirect('/admin/leave/balances?employee_id=' . $employeeId . '&year=' . $year);
+    }
+
+    public function logPastLeave(): void
+    {
+        $this->authorize('leave.create');
+
+        $employeeId     = (int) $this->request->input('employee_id', 0);
+        $leaveTypeId    = (int) $this->request->input('leave_type_id', 0);
+        $datesRaw       = trim((string) $this->request->input('dates', ''));
+        $reason         = trim((string) $this->request->input('reason', ''));
+        $year           = (int) $this->request->input('year', (int) date('Y'));
+        $alreadyCounted = (bool) $this->request->input('already_counted', 0);
+
+        if (!$employeeId || !$leaveTypeId || !$datesRaw || !$reason) {
+            flash('error', 'Employee, leave type, at least one date, and reason are all required.');
+            $this->redirect('/admin/leave/balances?employee_id=' . $employeeId . '&year=' . $year);
+            return;
+        }
+
+        $employee  = $this->tenant->employee($employeeId);
+        $companyId = (int) $employee['company_id'];
+
+        $dates   = array_filter(array_map('trim', explode(',', $datesRaw)));
+        $today   = date('Y-m-d');
+        $adminId = (int) ($_SESSION['user_id'] ?? 0);
+        $logged  = 0;
+        $errors  = [];
+
+        foreach ($dates as $date) {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $today) {
+                $errors[] = $date . ': only past/today dates allowed';
+                continue;
+            }
+            try {
+                if ($alreadyCounted) {
+                    // Create the leave record for date tracking ONLY — no balance changes.
+                    // chargeable_days=0 so archiving this record also won't touch the balance.
+                    $this->leaveRequests->create([
+                        'uuid'            => sprintf('%08x-%04x-%04x-%04x-%012x',
+                            random_int(0, 0xffffffff), random_int(0, 0xffff),
+                            random_int(0, 0x0fff) | 0x4000,
+                            random_int(0, 0x3fff) | 0x8000,
+                            random_int(0, 0xffffffffffff)),
+                        'company_id'      => $companyId,
+                        'employee_id'     => $employeeId,
+                        'leave_type_id'   => $leaveTypeId,
+                        'start_date'      => $date,
+                        'end_date'        => $date,
+                        'is_half_day'     => 0,
+                        'half_day_type'   => null,
+                        'reason'          => $reason . ' (date tracking only)',
+                        'status'          => 'approved',
+                        'calendar_days'   => 1,
+                        'weekend_days'    => 0,
+                        'holiday_days'    => 0,
+                        'chargeable_days' => 0,
+                        'applied_at'      => date('Y-m-d H:i:s'),
+                        'created_by'      => $adminId,
+                        'updated_by'      => $adminId,
+                    ]);
+                } else {
+                    $this->leaveService->adminCreate([
+                        'employee_id'   => $employeeId,
+                        'leave_type_id' => $leaveTypeId,
+                        'start_date'    => $date,
+                        'end_date'      => $date,
+                        'is_half_day'   => 0,
+                        'reason'        => $reason,
+                    ], $adminId);
+                }
+                $logged++;
+            } catch (RuntimeException $e) {
+                $errors[] = date('d M', strtotime($date)) . ': ' . $e->getMessage();
+            }
+        }
+
+        if ($logged > 0) {
+            $msg = $alreadyCounted
+                ? $logged . ' leave day(s) recorded for date tracking — balance unchanged (already counted).'
+                : $logged . ' leave day(s) recorded and deducted from balance.';
+            flash('success', $msg . ($errors ? ' Some dates skipped — see warnings.' : ''));
+        }
+        foreach ($errors as $err) {
+            flash('warning', $err);
+        }
+        if ($logged === 0 && empty($errors)) {
+            flash('error', 'No valid dates to process.');
+        }
+
+        $this->redirect('/admin/leave/balances?employee_id=' . $employeeId . '&year=' . $year);
     }
 
     public function holidays(): void
@@ -746,5 +1018,196 @@ class LeaveController extends Controller
             'SELECT * FROM branches WHERE deleted_at IS NULL AND (' . $scope['sql'] . ') ORDER BY name',
             $scope['params']
         );
+    }
+
+    // ── Planned Off Days ─────────────────────────────────────────────────────
+
+    public function plannedOffs(): void
+    {
+        $this->authorize('leave.view');
+
+        $companyId = $this->tenant->resolveCompanyId($this->request->input('company_id'));
+        if ($companyId === null) {
+            $companyId = (int) (($this->tenant->companies(true)[0]['id'] ?? 0));
+        }
+
+        $filters = [
+            'employee_id' => $this->request->input('employee_id'),
+            'date_from'   => $this->request->input('date_from', date('Y-m-01')),
+            'date_to'     => $this->request->input('date_to', date('Y-m-d', strtotime('+3 months'))),
+        ];
+
+        $scope = $this->tenant->sql('e.company_id', 'pod_emp_list');
+        $employeeList = $this->employees->raw(
+            'SELECT id, employee_code, first_name, last_name FROM employees e
+             WHERE e.deleted_at IS NULL AND (' . $scope['sql'] . ')
+             ORDER BY first_name, last_name',
+            $scope['params']
+        );
+
+        $this->view('admin.leave.planned_offs', [
+            'title'        => 'Planned Off Days',
+            'rows'         => $this->plannedOffs->search($companyId, $filters),
+            'filters'      => $filters,
+            'companyId'    => $companyId,
+            'companies'    => $this->tenant->companies(true),
+            'employeeList' => $employeeList,
+            'leaveTypes'   => $this->tenantLeaveTypes(),
+        ]);
+    }
+
+    public function storePlannedOff(): void
+    {
+        $this->authorize('leave.view');
+
+        $companyId    = $this->tenant->resolveCompanyId($this->request->input('company_id'));
+        $employeeId   = (int) $this->request->input('employee_id');
+        $dates        = array_filter(array_map('trim', explode(',', (string) $this->request->input('off_dates', ''))));
+        $reason       = trim((string) $this->request->input('reason', ''));
+        $note         = trim((string) $this->request->input('note', ''));
+        $leaveTypeId  = (int) $this->request->input('leave_type_id', 0);
+
+        if (!$employeeId || empty($dates) || !$reason) {
+            flash('error', 'Employee, at least one date, and a reason are required.');
+            $this->redirect('/admin/leave/planned-offs?company_id=' . $companyId);
+            return;
+        }
+
+        $employee = $this->employees->db()->fetch(
+            'SELECT e.*, u.id AS uid FROM employees e LEFT JOIN users u ON u.id = e.user_id WHERE e.id = :id AND e.deleted_at IS NULL LIMIT 1',
+            ['id' => $employeeId]
+        );
+        if (!$employee) {
+            flash('error', 'Employee not found.');
+            $this->redirect('/admin/leave/planned-offs?company_id=' . $companyId);
+            return;
+        }
+
+        $notifier  = new NotificationService();
+        $now       = date('Y-m-d H:i:s');
+        $today     = date('Y-m-d');
+        $adminId   = (int) ($this->user()['id'] ?? 0);
+        $created   = 0;
+        $leaveLinked  = 0;
+        $leaveErrors  = [];
+
+        foreach ($dates as $rawDate) {
+            $date = date('Y-m-d', strtotime($rawDate));
+            if (!$date || $date === '1970-01-01') {
+                continue;
+            }
+            $existing = $this->plannedOffs->db()->fetch(
+                'SELECT id FROM planned_off_days WHERE employee_id = :e AND off_date = :d AND deleted_at IS NULL LIMIT 1',
+                ['e' => $employeeId, 'd' => $date]
+            );
+            if ($existing) {
+                continue;
+            }
+            $this->plannedOffs->create([
+                'company_id'  => $companyId,
+                'employee_id' => $employeeId,
+                'off_date'    => $date,
+                'reason'      => $reason,
+                'note'        => $note ?: null,
+                'created_by'  => $adminId ?: null,
+                'notified_at' => (int) ($employee['uid'] ?? 0) > 0 ? $now : null,
+            ]);
+            $created++;
+
+            if ((int) ($employee['uid'] ?? 0) > 0) {
+                $formatted = date('D, d M Y', strtotime($date));
+                $notifier->notify(
+                    (int) $employee['uid'],
+                    'Day Off Scheduled: ' . $formatted,
+                    $reason . ($note ? ' — ' . $note : ''),
+                    '/employee/leave',
+                    'planned_off'
+                );
+            }
+
+            // If leave type selected and date is in the past, create approved leave record
+            if ($leaveTypeId > 0 && $date <= $today) {
+                try {
+                    $this->leaveService->adminCreate([
+                        'employee_id'   => $employeeId,
+                        'leave_type_id' => $leaveTypeId,
+                        'start_date'    => $date,
+                        'end_date'      => $date,
+                        'is_half_day'   => 0,
+                        'reason'        => $reason . ($note ? ' — ' . $note : '') . ' (Planned off)',
+                    ], $adminId);
+                    $leaveLinked++;
+                } catch (RuntimeException $e) {
+                    $leaveErrors[] = date('d M', strtotime($date)) . ': ' . $e->getMessage();
+                }
+            }
+        }
+
+        $msg = $created . ' planned off day(s) added'
+             . ($created > 0 && (int) ($employee['uid'] ?? 0) > 0 ? ' and employee notified' : '')
+             . '.';
+        if ($leaveLinked > 0) {
+            $msg .= ' ' . $leaveLinked . ' day(s) recorded against leave balance.';
+        }
+        if (!empty($leaveErrors)) {
+            $msg .= ' Some days could not be deducted: ' . implode('; ', $leaveErrors);
+        }
+
+        flash($leaveErrors ? 'warning' : 'success', $msg);
+        $this->redirect('/admin/leave/planned-offs?company_id=' . $companyId);
+    }
+
+    public function logPlannedOffAsLeave(int $id): void
+    {
+        $this->authorize('leave.view');
+
+        $row = $this->plannedOffs->find($id);
+        if (!$row) {
+            flash('error', 'Record not found.');
+            $this->redirect('/admin/leave/planned-offs');
+            return;
+        }
+        $this->tenant->assertCompany((int) $row['company_id']);
+
+        $leaveTypeId = (int) $this->request->input('leave_type_id', 0);
+        if (!$leaveTypeId) {
+            flash('error', 'Please select a leave type.');
+            $this->redirect('/admin/leave/planned-offs?company_id=' . $row['company_id']);
+            return;
+        }
+
+        $adminId = (int) ($this->user()['id'] ?? 0);
+        try {
+            $this->leaveService->adminCreate([
+                'employee_id'   => (int) $row['employee_id'],
+                'leave_type_id' => $leaveTypeId,
+                'start_date'    => $row['off_date'],
+                'end_date'      => $row['off_date'],
+                'is_half_day'   => 0,
+                'reason'        => $row['reason'] . (!empty($row['note']) ? ' — ' . $row['note'] : '') . ' (Planned off)',
+            ], $adminId);
+            flash('success', date('d M Y', strtotime($row['off_date'])) . ' recorded against leave balance.');
+        } catch (RuntimeException $e) {
+            flash('error', 'Could not deduct from balance: ' . $e->getMessage());
+        }
+
+        $this->redirect('/admin/leave/planned-offs?company_id=' . $row['company_id']);
+    }
+
+    public function destroyPlannedOff(int $id): void
+    {
+        $this->authorize('leave.view');
+
+        $row = $this->plannedOffs->find($id);
+        if (!$row) {
+            flash('error', 'Record not found.');
+            $this->redirect('/admin/leave/planned-offs');
+            return;
+        }
+        $this->tenant->assertCompany((int) $row['company_id']);
+        $this->plannedOffs->delete($id);
+
+        flash('success', 'Planned off day removed.');
+        $this->redirect('/admin/leave/planned-offs?company_id=' . $row['company_id']);
     }
 }

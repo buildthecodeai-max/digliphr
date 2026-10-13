@@ -12,28 +12,31 @@
 $manualMode = $manualMode ?? false;
 $query = http_build_query(array_filter($filters));
 ?>
-<div class="container-fluid py-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h1 class="h4 mb-0"><?= e($manualMode ? 'Manual Attendance Entry' : ($title ?? 'Attendance')) ?></h1>
-        <div class="d-flex gap-2">
-            <?php if (can('attendance.view_archived')): ?>
-            <a href="/admin/attendance/archived" class="btn btn-outline-secondary btn-sm">Archived</a>
-            <?php endif; ?>
-            <?php if (can('attendance.correct')): ?>
-            <a href="/admin/attendance/corrections" class="btn btn-outline-secondary btn-sm">Corrections</a>
-            <?php endif; ?>
-            <?php if (can('attendance.manual')): ?>
-            <a href="/admin/attendance/manual" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-plus-circle"></i> Manual Entry
-            </a>
-            <?php endif; ?>
-            <?php if (can('attendance.export')): ?>
-            <a href="/admin/attendance/export?<?= e($query) ?>" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-download"></i> Export CSV
-            </a>
-            <?php endif; ?>
-        </div>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1><?= e($manualMode ? 'Manual Attendance Entry' : ($title ?? 'Attendance')) ?></h1>
+        <p class="subtitle"><?= $manualMode ? 'Record attendance manually for employees' : 'Track and manage employee attendance records' ?></p>
     </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <?php if (can('attendance.view_archived')): ?>
+        <a href="/admin/attendance/archived" class="btn btn-soft btn-sm">Archived</a>
+        <?php endif; ?>
+        <?php if (can('attendance.correct')): ?>
+        <a href="/admin/attendance/corrections" class="btn btn-soft btn-sm">Corrections</a>
+        <?php endif; ?>
+        <?php if (can('attendance.manual')): ?>
+        <a href="/admin/attendance/manual" class="btn btn-soft btn-sm">
+            <i data-lucide="plus-circle" style="width:14px;height:14px" class="me-1"></i> Manual Entry
+        </a>
+        <?php endif; ?>
+        <?php if (can('attendance.export')): ?>
+        <a href="/admin/attendance/export?<?= e($query) ?>" class="btn btn-soft btn-sm">
+            <i data-lucide="download" style="width:14px;height:14px" class="me-1"></i> Export CSV
+        </a>
+        <?php endif; ?>
+    </div>
+</div>
+<div>
 
     <?php include config('app.paths.views') . '/partials/alerts.php'; ?>
     <?php if(!$manualMode && !empty($filters['company_id'])): $savedModule='attendance';$currentFilters=$filters;include config('app.paths.views').'/partials/saved-filters.php';endif; ?>
@@ -237,7 +240,7 @@ $query = http_build_query(array_filter($filters));
             </table>
         </div>
         <?php if (($records['last_page'] ?? 1) > 1): ?>
-        <div class="card-footer bg-white py-2">
+        <div class="card-footer py-2">
             <?= paginate_links($records, '/admin/attendance?' . $query) ?>
         </div>
         <?php endif; ?>

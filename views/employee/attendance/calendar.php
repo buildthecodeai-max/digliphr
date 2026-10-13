@@ -222,7 +222,26 @@ if (!$correctionsMode) {
 
 <style>
 .calendar-grid { display: flex; flex-direction: column; gap: .25rem; }
-.calendar-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: .25rem; }
-.calendar-cell { min-height: 4.5rem; background: #fff; }
-.calendar-empty { background: transparent; border: none !important; }
+.calendar-row  { display: grid; grid-template-columns: repeat(7, 1fr); gap: .25rem; }
+.calendar-cell { min-height: 4.5rem; background: #fff; transition: background .15s; }
+.calendar-empty { background: transparent !important; border: none !important; }
+
+html[data-theme="dark"] .calendar-cell {
+    background: #1a2035 !important;
+    border-color: rgba(255,255,255,.07) !important;
+    color: #e2e8f0;
+}
+html[data-theme="dark"] .calendar-cell .fw-semibold { color: #e2e8f0; }
+html[data-theme="dark"] .calendar-cell .text-muted  { color: #94a3b8 !important; }
+html[data-theme="dark"] .calendar-head .calendar-cell { background: transparent !important; }
+
+/* Bootstrap *-subtle status backgrounds — override for dark mode */
+html[data-theme="dark"] .bg-success-subtle  { background-color: rgba(32,212,131,.18) !important; }
+html[data-theme="dark"] .bg-danger-subtle   { background-color: rgba(239,68,68,.18)  !important; }
+html[data-theme="dark"] .bg-warning-subtle  { background-color: rgba(245,158,11,.18) !important; }
+html[data-theme="dark"] .bg-info-subtle     { background-color: rgba(59,130,246,.18) !important; }
+html[data-theme="dark"] .bg-primary-subtle  { background-color: rgba(99,102,241,.18) !important; }
+html[data-theme="dark"] .bg-secondary-subtle { background-color: rgba(100,116,139,.18) !important; }
+html[data-theme="dark"] .bg-light-subtle    { background-color: rgba(255,255,255,.06) !important; }
+html[data-theme="dark"] .bg-dark-subtle     { background-color: rgba(255,255,255,.08) !important; }
 </style>

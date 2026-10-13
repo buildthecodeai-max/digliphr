@@ -62,9 +62,9 @@ class Attendance extends Model
              FROM attendance a
              INNER JOIN employees e ON e.id = a.employee_id
              LEFT JOIN departments d ON d.id = e.department_id
-             LEFT JOIN branches b ON b.id = a.branch_id
+             LEFT JOIN branches b ON b.id = COALESCE(a.branch_id, e.branch_id)
              LEFT JOIN companies c ON c.id = a.company_id
-             LEFT JOIN shifts s ON s.id = a.shift_id
+             LEFT JOIN shifts s ON s.id = COALESCE(a.shift_id, e.shift_id)
              LEFT JOIN users au ON au.id = a.deleted_by
              WHERE a.id = :id AND {$deletedClause}
              LIMIT 1",
@@ -169,9 +169,9 @@ class Attendance extends Model
              FROM attendance a
              INNER JOIN employees e ON e.id = a.employee_id
              LEFT JOIN departments d ON d.id = e.department_id
-             LEFT JOIN branches b ON b.id = a.branch_id
+             LEFT JOIN branches b ON b.id = COALESCE(a.branch_id, e.branch_id)
              LEFT JOIN companies c ON c.id = a.company_id
-             LEFT JOIN shifts s ON s.id = a.shift_id
+             LEFT JOIN shifts s ON s.id = COALESCE(a.shift_id, e.shift_id)
              LEFT JOIN users au ON au.id = a.deleted_by
              WHERE {$where}
              ORDER BY {$orderBy}
@@ -234,8 +234,8 @@ class Attendance extends Model
                                   AND a.status NOT IN ('on_leave','holiday','weekend','absent'))
                     THEN 1 ELSE 0 END) AS missing_checkout_count,
                 SUM(CASE WHEN a.verification_status = 'flagged' THEN 1 ELSE 0 END) AS flagged_count,
-                COALESCE(SUM(a.work_minutes), 0) AS total_work_minutes,
-                COALESCE(SUM(a.overtime_minutes), 0) AS total_overtime_minutes,
+                COALESCE(SUM(CASE WHEN a.check_out_at IS NOT NULL THEN a.work_minutes ELSE 0 END), 0) AS total_work_minutes,
+                COALESCE(SUM(CASE WHEN a.check_out_at IS NOT NULL THEN a.overtime_minutes ELSE 0 END), 0) AS total_overtime_minutes,
                 COALESCE(SUM(a.late_minutes), 0) AS total_late_minutes
              FROM attendance a
              INNER JOIN employees e ON e.id = a.employee_id
@@ -257,6 +257,65 @@ class Attendance extends Model
             'total_overtime_minutes' => 0,
             'total_late_minutes' => 0,
         ];
+    }
+
+    public function remoteByEmployee(array $filters = []): array
+    {
+        $deletedClause = !empty($filters['archived']) ? 'a.deleted_at IS NOT NULL' : 'a.deleted_at IS NULL';
+        $clauses = [$deletedClause, "a.status = 'remote'"];
+        $params  = [];
+
+        if (!empty($filters['company_id'])) {
+            $clauses[] = 'a.company_id = :company_id';
+            $params['company_id'] = $filters['company_id'];
+        }
+        if (!empty($filters['department_id'])) {
+            $clauses[] = 'e.department_id = :department_id';
+            $params['department_id'] = $filters['department_id'];
+        }
+        if (!empty($filters['branch_id'])) {
+            $clauses[] = 'a.branch_id = :branch_id';
+            $params['branch_id'] = $filters['branch_id'];
+        }
+        if (!empty($filters['date_from'])) {
+            $clauses[] = 'a.attendance_date >= :date_from';
+            $params['date_from'] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $clauses[] = 'a.attendance_date <= :date_to';
+            $params['date_to'] = $filters['date_to'];
+        }
+        if (!empty($filters['q'])) {
+            $clauses[] = '(e.first_name LIKE :q1 OR e.last_name LIKE :q2 OR e.employee_code LIKE :q3)';
+            $like = '%' . $filters['q'] . '%';
+            $params['q1'] = $like;
+            $params['q2'] = $like;
+            $params['q3'] = $like;
+        }
+
+        $where = implode(' AND ', $clauses);
+
+        return $this->db->fetchAll(
+            "SELECT
+                e.id            AS employee_id,
+                e.employee_code,
+                e.first_name,
+                e.last_name,
+                d.name          AS department_name,
+                b.name          AS branch_name,
+                COUNT(a.id)                        AS remote_days,
+                COALESCE(SUM(a.work_minutes), 0)   AS total_work_minutes,
+                COALESCE(SUM(a.overtime_minutes), 0) AS total_overtime_minutes,
+                MAX(a.attendance_date)             AS last_remote_date
+             FROM attendance a
+             INNER JOIN employees e ON e.id = a.employee_id
+             LEFT JOIN departments d ON d.id = e.department_id
+             LEFT JOIN branches b ON b.id = COALESCE(a.branch_id, e.branch_id)
+             WHERE {$where}
+             GROUP BY e.id, e.employee_code, e.first_name, e.last_name, d.name, b.name
+             ORDER BY remote_days DESC, e.first_name ASC",
+            $params
+        );
     }
 
     public function calendarMonth(int $employeeId, int $year, int $month): array

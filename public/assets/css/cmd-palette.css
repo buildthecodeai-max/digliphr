@@ -1,0 +1,260 @@
+/* =========================================================
+   Command Palette — triggered by Ctrl+K / ⌘K
+   Uses existing --ems-* design tokens so light/dark modes
+   work automatically.
+   ========================================================= */
+
+.cmd-palette-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9990;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 100px;
+    background: rgba(0, 0, 0, .55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.cmd-palette {
+    width: 100%;
+    max-width: 580px;
+    margin: 0 16px;
+    background: var(--ems-card, #fff);
+    border: 1px solid var(--ems-border, #dee2e6);
+    border-radius: 18px;
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, .04),
+        0 8px 32px rgba(0, 0, 0, .18),
+        0 32px 80px rgba(0, 0, 0, .28);
+    overflow: hidden;
+    animation: cmdIn .14s cubic-bezier(.22, 1, .36, 1);
+}
+
+@keyframes cmdIn {
+    from { opacity: 0; transform: translateY(-12px) scale(.97); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* ---- Input row ---- */
+.cmd-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--ems-border, #dee2e6);
+}
+
+.cmd-input-icon {
+    flex-shrink: 0;
+    color: var(--ems-text-muted, #9ca3af);
+    display: flex;
+}
+.cmd-input-icon svg { width: 18px; height: 18px; }
+
+#cmdPaletteInput {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    font-weight: 500;
+    background: transparent;
+    color: var(--ems-text-heading, #111827);
+    font-family: inherit;
+    min-width: 0;
+}
+#cmdPaletteInput::placeholder {
+    color: var(--ems-text-muted, #9ca3af);
+    font-weight: 400;
+}
+
+.cmd-esc-badge {
+    flex-shrink: 0;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 6px;
+    border: 1px solid var(--ems-border, #dee2e6);
+    background: var(--ems-bg-section, #f8f9fa);
+    color: var(--ems-text-muted, #9ca3af);
+    font-family: inherit;
+    cursor: default;
+}
+
+/* ---- Results area ---- */
+.cmd-results {
+    max-height: 390px;
+    overflow-y: auto;
+    padding: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--ems-border, #dee2e6) transparent;
+}
+.cmd-results::-webkit-scrollbar { width: 4px; }
+.cmd-results::-webkit-scrollbar-thumb { background: var(--ems-border, #dee2e6); border-radius: 4px; }
+
+.cmd-group-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--ems-text-muted, #9ca3af);
+    padding: 8px 10px 4px;
+    user-select: none;
+}
+.cmd-group-label:first-child { padding-top: 4px; }
+
+/* ---- Individual items ---- */
+.cmd-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-decoration: none !important;
+    color: var(--ems-text-heading, #111827);
+    transition: background .1s, color .1s;
+    position: relative;
+}
+.cmd-item:hover,
+.cmd-item.cmd-item--active {
+    background: var(--ems-primary, #1e3a5f);
+    color: #fff !important;
+    text-decoration: none !important;
+}
+/* Use ID specificity to beat saas-theme.css `a:not(.btn):hover { color: var(--ems-primary) !important }` */
+#cmdPalette .cmd-item:hover,
+#cmdPalette .cmd-item.cmd-item--active {
+    color: #fff !important;
+    text-decoration: none !important;
+}
+#cmdPalette .cmd-item:hover .cmd-item-name,
+#cmdPalette .cmd-item.cmd-item--active .cmd-item-name { color: #fff !important; }
+.cmd-item:hover .cmd-item-sub,
+.cmd-item.cmd-item--active .cmd-item-sub { color: rgba(255,255,255,.92) !important; }
+#cmdPalette .cmd-item:hover .cmd-item-sub,
+#cmdPalette .cmd-item.cmd-item--active .cmd-item-sub { color: rgba(255,255,255,.92) !important; }
+.cmd-item:hover .cmd-icon-wrap,
+.cmd-item.cmd-item--active .cmd-icon-wrap { background: rgba(255,255,255,.15); color: #fff; }
+.cmd-item:hover .cmd-badge,
+.cmd-item.cmd-item--active .cmd-badge { background: rgba(255,255,255,.18); color: rgba(255,255,255,.9); }
+
+.cmd-icon-wrap {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    background: var(--ems-bg-section, #f8f9fa);
+    color: var(--ems-text-secondary, #6c757d);
+    transition: background .1s, color .1s;
+}
+.cmd-icon-wrap svg { width: 14px; height: 14px; }
+
+.cmd-item-body { flex: 1; min-width: 0; }
+.cmd-item-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+.cmd-item-sub {
+    font-size: 11.5px;
+    color: var(--ems-text-muted, #9ca3af);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+    transition: color .1s;
+}
+
+.cmd-badge {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--ems-bg-section, #f1f5f9);
+    color: var(--ems-text-muted, #6c757d);
+    transition: background .1s, color .1s;
+    border: 1px solid var(--ems-border, #e2e8f0);
+}
+
+.cmd-empty {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--ems-text-muted, #9ca3af);
+    font-size: 13.5px;
+}
+.cmd-empty-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    opacity: .5;
+    display: block;
+}
+
+/* ---- Footer hints ---- */
+.cmd-footer {
+    border-top: 1px solid var(--ems-border, #dee2e6);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.cmd-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--ems-text-muted, #9ca3af);
+}
+.cmd-hint kbd {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    border: 1px solid var(--ems-border, #dee2e6);
+    background: var(--ems-bg-section, #f8f9fa);
+    color: var(--ems-text-secondary, #6c757d);
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+/* ---- Open trigger badge in topbar ---- */
+.cmd-topbar-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--ems-text-muted, #9ca3af);
+    border: 1px solid var(--ems-border, #dee2e6);
+    border-radius: 8px;
+    padding: 4px 10px;
+    background: var(--ems-bg-section, #f8f9fa);
+    transition: border-color .15s, color .15s;
+}
+.cmd-topbar-trigger:hover { border-color: var(--ems-primary, #1e3a5f); color: var(--ems-primary, #1e3a5f); }
+.cmd-topbar-trigger svg { width: 13px; height: 13px; }
+.cmd-topbar-trigger kbd { font-size: 10px; padding: 0 4px; border-radius: 4px; border: 1px solid currentColor; opacity: .6; font-family: inherit; }
+
+/* ---- Dark mode overrides (existing token values handle most of it) ---- */
+:root[data-theme="dark"] .cmd-palette,
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .cmd-palette {
+        box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 8px 32px rgba(0,0,0,.5), 0 32px 80px rgba(0,0,0,.5);
+    }
+}
+:root[data-theme="dark"] .cmd-palette {
+    box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 8px 32px rgba(0,0,0,.5), 0 32px 80px rgba(0,0,0,.5);
+}
+
+@media (max-width: 600px) {
+    .cmd-palette-overlay { padding-top: 60px; align-items: flex-start; }
+    .cmd-palette { border-radius: 14px; }
+    .cmd-results { max-height: 60vh; }
+}

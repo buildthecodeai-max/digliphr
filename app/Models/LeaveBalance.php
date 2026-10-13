@@ -52,12 +52,8 @@ class LeaveBalance extends Model
         }
 
         $closing = (float) $row['opening_balance']
-            + (float) $row['accrued']
-            + (float) $row['carried_forward']
-            + (float) $row['adjusted']
             - (float) $row['used']
-            - (float) $row['pending']
-            - (float) $row['encashed'];
+            - (float) $row['pending'];
 
         $this->update($id, ['closing_balance' => round($closing, 2)]);
     }

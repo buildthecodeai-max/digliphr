@@ -233,9 +233,20 @@ class AttendanceService
         $checkOutAt = $now->format('Y-m-d H:i:s');
         $checkInAt = (string) $active['check_in_at'];
 
-        $breakMinutes = $this->sumBreakMinutes((int) $active['id']);
+        $actualBreaks = $this->sumBreakMinutes((int) $active['id']);
+        $shiftBreak   = (int) ($shift['break_minutes'] ?? 60);
+        $breakMinutes = $actualBreaks > 0 ? $actualBreaks : $shiftBreak;
         $workMinutes = max(0, (int) floor((strtotime($checkOutAt) - strtotime($checkInAt)) / 60) - $breakMinutes);
         $expectedWork = (int) ($active['expected_work_minutes'] ?? $this->calculateExpectedWorkMinutes($shift));
+
+        // If checkout date is later than the attendance_date, this is a late correction
+        // for a forgotten checkout. Cap work_minutes so no overtime is fabricated.
+        $attendanceDate = (string) ($active['attendance_date'] ?? date('Y-m-d'));
+        $checkoutDate = date('Y-m-d', strtotime($checkOutAt));
+        if ($checkoutDate > $attendanceDate) {
+            $workMinutes = min($workMinutes, $expectedWork > 0 ? $expectedWork : 420);
+        }
+
         $lateMinutes = (int) ($active['late_minutes'] ?? $this->calculateLateMinutes($shift, $checkInAt, $isRemote));
         $earlyLeave = $this->calculateEarlyLeaveMinutes($shift, $checkOutAt);
         $overtime = $this->calculateOvertimeMinutes($shift, $workMinutes, $expectedWork);
@@ -715,7 +726,7 @@ class AttendanceService
         }
 
         if (empty($shift['start_time']) || empty($shift['end_time'])) {
-            return 480;
+            return 420;
         }
 
         $start = strtotime('1970-01-01 ' . $shift['start_time']);
@@ -726,7 +737,7 @@ class AttendanceService
         }
 
         $minutes = (int) max(0, ($end - $start) / 60 - (int) ($shift['break_minutes'] ?? 0));
-        return $minutes > 0 ? $minutes : 480;
+        return $minutes > 0 ? $minutes : 420;
     }
 
     private function resolveAttendanceDate(array $shift, \DateTime $now): string
@@ -1002,9 +1013,10 @@ class AttendanceService
             ? !empty($payload['is_remote'])
             : (bool) ($record['is_remote'] ?? false);
 
+        $shiftBreakDefault = (int) ($shift['break_minutes'] ?? 60);
         $breakMinutes = isset($payload['break_minutes'])
             ? max(0, (int) $payload['break_minutes'])
-            : (int) ($record['break_minutes'] ?? 0);
+            : max((int) ($record['break_minutes'] ?? 0), $shiftBreakDefault);
 
         $expectedWork = (int) ($record['expected_work_minutes'] ?? $this->calculateExpectedWorkMinutes($shift));
         $workMinutes = isset($payload['work_minutes']) && $payload['work_minutes'] !== ''
@@ -1020,8 +1032,17 @@ class AttendanceService
             ? max(0, (int) $payload['overtime_minutes'])
             : null;
 
-        if ($checkIn && $checkOut && (!isset($payload['work_minutes']) || $payload['work_minutes'] === '')) {
-            $workMinutes = max(0, (int) floor((strtotime($checkOut) - strtotime($checkIn)) / 60) - $breakMinutes);
+        // Auto-recalculate work_minutes from timestamps when: not explicitly supplied,
+        // or supplied as 0 (the form default) AND a checkout time is being set/changed.
+        $workMinutesExplicit = isset($payload['work_minutes']) && $payload['work_minutes'] !== '' && (int) $payload['work_minutes'] > 0;
+        if ($checkIn && $checkOut && !$workMinutesExplicit) {
+            $rawWork = max(0, (int) floor((strtotime($checkOut) - strtotime($checkIn)) / 60) - $breakMinutes);
+            // Cap if checkout is on a later calendar day than attendance_date (forgotten checkout corrected late)
+            $attDate = (string) ($record['attendance_date'] ?? date('Y-m-d'));
+            if (date('Y-m-d', strtotime($checkOut)) > $attDate) {
+                $rawWork = min($rawWork, $expectedWork > 0 ? $expectedWork : 420);
+            }
+            $workMinutes = $rawWork;
         }
         if ($lateMinutes === null) {
             $lateMinutes = $checkIn ? $this->calculateLateMinutes($shift, $checkIn, $isRemote) : 0;
@@ -1368,6 +1389,11 @@ class AttendanceService
         if ($checkOut !== null) {
             $workMinutes = max(0, (int) floor((strtotime($checkOut) - strtotime($checkIn)) / 60) - $breakMinutes);
             $expectedWork = (int) ($record['expected_work_minutes'] ?? $this->calculateExpectedWorkMinutes($shift));
+            // Cap if checkout is on a later calendar day than attendance_date
+            $attDate = (string) ($record['attendance_date'] ?? date('Y-m-d'));
+            if (date('Y-m-d', strtotime($checkOut)) > $attDate) {
+                $workMinutes = min($workMinutes, $expectedWork > 0 ? $expectedWork : 420);
+            }
             $earlyLeave = $this->calculateEarlyLeaveMinutes($shift, $checkOut);
             $overtime = $this->calculateOvertimeMinutes($shift, $workMinutes, $expectedWork);
         }

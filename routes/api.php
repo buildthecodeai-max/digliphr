@@ -31,9 +31,15 @@ $router->group(['prefix' => '/api'], function ($router) use ($app) {
             if (!$userId) {
                 $app->response()->error('Unauthenticated.', null, 401);
             }
-            $rows = \App\Core\Database::getInstance()->fetchAll(
+            $db = \App\Core\Database::getInstance();
+            // Auto-prune read notifications older than 30 days so the table stays clean
+            $db->query(
+                'DELETE FROM notifications WHERE user_id = :uid AND is_read = 1 AND created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)',
+                ['uid' => $userId]
+            );
+            $rows = $db->fetchAll(
                 'SELECT id, type, title, message, action_url, is_read, created_at
-                 FROM notifications WHERE user_id = :uid ORDER BY created_at DESC LIMIT 50',
+                 FROM notifications WHERE user_id = :uid ORDER BY is_read ASC, created_at DESC LIMIT 50',
                 ['uid' => $userId]
             );
             $unread = 0;
@@ -69,6 +75,70 @@ $router->group(['prefix' => '/api'], function ($router) use ($app) {
             $response->success('All notifications marked as read.');
         }, [CsrfMiddleware::class]);
 
+        $router->post('/notifications/delete-read', function ($request, $response) {
+            $uid = (new \App\Services\AuthService())->id();
+            if (!$uid) { $response->error('Unauthenticated.', null, 401); return; }
+            \App\Core\Database::getInstance()->query(
+                'DELETE FROM notifications WHERE user_id = :uid AND is_read = 1',
+                ['uid' => $uid]
+            );
+            $response->success('Read notifications cleared.');
+        }, [CsrfMiddleware::class]);
+
+        $router->post('/notifications/delete-all', function ($request, $response) {
+            $uid = (new \App\Services\AuthService())->id();
+            if (!$uid) { $response->error('Unauthenticated.', null, 401); return; }
+            \App\Core\Database::getInstance()->query(
+                'DELETE FROM notifications WHERE user_id = :uid',
+                ['uid' => $uid]
+            );
+            $response->success('All notifications cleared.');
+        }, [CsrfMiddleware::class]);
+
+        $router->post('/notifications/{id}/delete', function ($request, $response, $id) {
+            $uid = (new \App\Services\AuthService())->id();
+            if (!$uid) { $response->error('Unauthenticated.', null, 401); return; }
+            \App\Core\Database::getInstance()->query(
+                'DELETE FROM notifications WHERE id = :id AND user_id = :uid',
+                ['id' => (int) $id, 'uid' => $uid]
+            );
+            $response->success('Notification deleted.');
+        }, [CsrfMiddleware::class]);
+
+        $router->get('/notifications/smart', function ($request, $response) {
+            $auth = new \App\Services\AuthService();
+            if (!$auth->id()) { $response->error('Unauthenticated.', null, 401); }
+            // Admin-level smart alerts only for admin roles
+            if (!$auth->isAdmin()) {
+                $response->success('Smart notifications.', ['items' => []]);
+                return;
+            }
+            $db     = \App\Core\Database::getInstance();
+            $tenant = new \App\Services\TenantContext($auth);
+            $items  = [];
+            try {
+                $s = $tenant->sql('company_id', 'sn_leave');
+                $n = (int) $db->fetchColumn("SELECT COUNT(*) FROM leave_requests WHERE status = 'pending' AND deleted_at IS NULL AND (" . $s['sql'] . ')', $s['params']);
+                if ($n) $items[] = ['type' => 'approval', 'icon' => 'check-circle', 'color' => '#6366f1', 'title' => $n . ($n === 1 ? ' leave request' : ' leave requests') . ' awaiting approval', 'sub' => 'Tap to review and approve', 'url' => '/admin/approvals'];
+            } catch (\Throwable $e) {}
+            try {
+                $s = $tenant->sql('company_id', 'sn_late');
+                $n = (int) $db->fetchColumn("SELECT COUNT(*) FROM attendance WHERE attendance_date = CURDATE() AND status = 'late' AND deleted_at IS NULL AND (" . $s['sql'] . ')', $s['params']);
+                if ($n) $items[] = ['type' => 'late', 'icon' => 'alarm-clock', 'color' => '#f59e0b', 'title' => $n . ($n === 1 ? ' employee' : ' employees') . ' arrived late today', 'sub' => 'View attendance log', 'url' => '/admin/attendance'];
+            } catch (\Throwable $e) {}
+            try {
+                $s = $tenant->sql('company_id', 'sn_checkout');
+                $n = (int) $db->fetchColumn('SELECT COUNT(*) FROM attendance WHERE attendance_date = CURDATE() AND check_in IS NOT NULL AND check_out IS NULL AND deleted_at IS NULL AND (' . $s['sql'] . ')', $s['params']);
+                if ($n) $items[] = ['type' => 'attendance', 'icon' => 'clock-x', 'color' => '#ef4444', 'title' => $n . ' missing checkout' . ($n !== 1 ? 's' : '') . ' today', 'sub' => 'Employees still checked in', 'url' => '/admin/attendance'];
+            } catch (\Throwable $e) {}
+            try {
+                $s = $tenant->sql('company_id', 'sn_payroll');
+                $n = (int) $db->fetchColumn("SELECT COUNT(*) FROM payroll_periods WHERE status IN ('draft','processing','calculated') AND deleted_at IS NULL AND (" . $s['sql'] . ')', $s['params']);
+                if ($n) $items[] = ['type' => 'payroll', 'icon' => 'banknote', 'color' => '#16a34a', 'title' => $n . ' payroll period' . ($n !== 1 ? 's' : '') . ' need processing', 'sub' => 'Review payroll module', 'url' => '/admin/payroll'];
+            } catch (\Throwable $e) {}
+            $response->success('Smart notifications.', ['items' => $items]);
+        });
+
         $router->get('/dashboard/stats', ['Admin\\DashboardController', 'stats']);
 
         $router->get('/employees/search', function ($request, $response) {
@@ -90,9 +160,9 @@ $router->group(['prefix' => '/api'], function ($router) use ($app) {
                  FROM employees e
                  LEFT JOIN departments d ON d.id = e.department_id
                  WHERE e.deleted_at IS NULL AND (' . $scope['sql'] . ')
-                   AND (e.first_name LIKE :q OR e.last_name LIKE :q OR e.employee_code LIKE :q OR e.company_email LIKE :q)
+                   AND (e.first_name LIKE :q1 OR e.last_name LIKE :q2 OR e.employee_code LIKE :q3 OR e.company_email LIKE :q4)
                  ORDER BY e.first_name, e.last_name LIMIT 8',
-                array_merge(['q' => $like], $scope['params'])
+                array_merge(['q1' => $like, 'q2' => $like, 'q3' => $like, 'q4' => $like], $scope['params'])
             );
             $response->success('Employees found.', ['items' => $items]);
         });
@@ -138,6 +208,10 @@ $router->group(['prefix' => '/api'], function ($router) use ($app) {
 
     // Desktop monitoring agent — Bearer token auth (not cookie-only)
     $router->post('/monitoring/auth/login', ['Api\\MonitoringApiController', 'login']);
+    // Web-session token exchange (employee must be logged in via cookie; used by desktop agent)
+    $router->post('/monitoring/auth/web-token', ['Api\\MonitoringApiController', 'webTokenGenerate'], [\App\Middleware\AuthMiddleware::class]);
+    $router->post('/monitoring/auth/web-token-exchange', ['Api\\MonitoringApiController', 'webTokenExchange']);
+    $router->get('/monitoring/auth/web-token-status', ['Api\\MonitoringApiController', 'webTokenStatus']);
 
     $router->group(['middleware' => [\App\Middleware\MonitoringAgentMiddleware::class]], function ($router) {
         $router->post('/monitoring/devices/register', ['Api\\MonitoringApiController', 'registerDevice']);

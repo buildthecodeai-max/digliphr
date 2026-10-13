@@ -15,16 +15,17 @@ class DashboardController extends Controller
         $db = Database::getInstance();
 
         $stats = [
-            'employees_total' => $this->tenantCount($db, 'employees', 'deleted_at IS NULL'),
-            'employees_active' => $this->tenantCount($db, 'employees', 'employment_status = "active" AND deleted_at IS NULL'),
-            'present_today' => $this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status IN ("present","late","remote","manual") AND deleted_at IS NULL'),
-            'on_leave_today' => $this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status = "on_leave" AND deleted_at IS NULL'),
-            'pending_leaves' => $this->tenantCount($db, 'leave_requests', 'status = "pending" AND deleted_at IS NULL'),
-            'departments' => $this->tenantCount($db, 'departments', 'is_active = 1 AND deleted_at IS NULL'),
-            'branches' => $this->tenantCount($db, 'branches', 'is_active = 1 AND deleted_at IS NULL'),
-            'payroll_pending' => $this->tenantCount($db, 'payroll_periods', 'status IN ("draft","processing","calculated") AND deleted_at IS NULL'),
-            'late_today' => $this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status = "late" AND deleted_at IS NULL'),
-            'missing_checkout' => $this->tenantCount($db, 'attendance', 'status = "missing_checkout" AND deleted_at IS NULL'),
+            'employees_total'   => $this->tenantCount($db, 'employees', 'deleted_at IS NULL'),
+            'employees_active'  => $this->tenantCount($db, 'employees', 'employment_status = "active" AND deleted_at IS NULL'),
+            'present_today'     => $this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status IN ("present","late","remote","manual") AND deleted_at IS NULL'),
+            'on_leave_today'    => $this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status = "on_leave" AND deleted_at IS NULL'),
+            'absent_today'      => $this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status = "absent" AND deleted_at IS NULL'),
+            'remote_today'      => $this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status = "remote" AND deleted_at IS NULL'),
+            'pending_leaves'    => $this->tenantCount($db, 'leave_requests', 'status = "pending" AND deleted_at IS NULL'),
+            'departments'       => $this->tenantCount($db, 'departments', 'is_active = 1 AND deleted_at IS NULL'),
+            'branches'          => $this->tenantCount($db, 'branches', 'is_active = 1 AND deleted_at IS NULL'),
+            'late_today'        => $this->tenantCount($db, 'attendance', 'attendance_date = CURDATE() AND status = "late" AND deleted_at IS NULL'),
+            'missing_checkout'  => $this->tenantCount($db, 'attendance', 'status = "missing_checkout" AND deleted_at IS NULL'),
         ];
 
         $attendanceScope = $this->tenant->sql('company_id', 'dashboard_attendance');
@@ -67,6 +68,59 @@ class DashboardController extends Controller
             $departmentScope['params']
         );
 
+        // Employees currently on leave today
+        $onLeaveTodayScope = $this->tenant->sql('a.company_id', 'dashboard_on_leave_today');
+        $onLeaveToday = $db->fetchAll(
+            'SELECT e.id AS employee_id, e.first_name, e.last_name, e.employee_code,
+                    d.name AS department_name, lt.name AS leave_type_name,
+                    a.attendance_date
+             FROM attendance a
+             INNER JOIN employees e ON e.id = a.employee_id
+             LEFT JOIN departments d ON d.id = e.department_id
+             LEFT JOIN leave_requests lr ON lr.employee_id = a.employee_id
+                AND lr.start_date <= CURDATE() AND lr.end_date >= CURDATE()
+                AND lr.status = "approved" AND lr.deleted_at IS NULL
+             LEFT JOIN leave_types lt ON lt.id = lr.leave_type_id
+             WHERE a.attendance_date = CURDATE() AND a.status = "on_leave"
+               AND a.deleted_at IS NULL AND (' . $onLeaveTodayScope['sql'] . ')
+             ORDER BY e.first_name ASC LIMIT 10',
+            $onLeaveTodayScope['params']
+        );
+
+        // Employees absent OR no check-in today (active employees with absent record or no record at all)
+        $noShowScope = $this->tenant->sql('e.company_id', 'dashboard_no_show');
+        $noShowToday = $db->fetchAll(
+            'SELECT e.id AS employee_id, e.first_name, e.last_name, e.employee_code,
+                    d.name AS department_name,
+                    COALESCE(a.status, "no_checkin") AS status_label
+             FROM employees e
+             LEFT JOIN departments d ON d.id = e.department_id
+             LEFT JOIN attendance a ON a.employee_id = e.id
+                AND a.attendance_date = CURDATE() AND a.deleted_at IS NULL
+             WHERE e.deleted_at IS NULL AND e.employment_status = "active"
+               AND (a.status = "absent" OR a.id IS NULL)
+               AND (' . $noShowScope['sql'] . ')
+             ORDER BY e.first_name ASC LIMIT 12',
+            $noShowScope['params']
+        );
+
+        // Recently joined employees (last 60 days)
+        $recentJoinScope = $this->tenant->sql('e.company_id', 'dashboard_recent_join');
+        $recentJoiners = $db->fetchAll(
+            'SELECT e.id, e.first_name, e.last_name, e.employee_code, e.joining_date,
+                    d.name AS department_name, ds.name AS designation_name
+             FROM employees e
+             LEFT JOIN departments d ON d.id = e.department_id
+             LEFT JOIN designations ds ON ds.id = e.designation_id
+             WHERE e.deleted_at IS NULL
+               AND e.joining_date >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+               AND e.joining_date <= CURDATE()
+               AND (' . $recentJoinScope['sql'] . ')
+             ORDER BY e.joining_date DESC, e.id DESC LIMIT 8',
+            $recentJoinScope['params']
+        );
+
+        // Recent leave requests
         $leaveScope = $this->tenant->sql('lr.company_id', 'dashboard_leave');
         $recentLeaves = $db->fetchAll(
             'SELECT lr.*, e.first_name, e.last_name, e.employee_code, lt.name AS leave_type_name
@@ -77,43 +131,6 @@ class DashboardController extends Controller
              ORDER BY lr.created_at DESC LIMIT 8',
             $leaveScope['params']
         );
-
-        $payrollScope = $this->tenant->sql('company_id', 'dashboard_payroll');
-        $recentPayroll = $db->fetchAll(
-            'SELECT * FROM payroll_periods WHERE deleted_at IS NULL AND (' . $payrollScope['sql'] . ')
-             ORDER BY period_year DESC, period_month DESC LIMIT 5',
-            $payrollScope['params']
-        );
-
-        $approvalItems = [];
-        if ($db->tableExists('approval_chains')) {
-            $approvalService = new \App\Services\ApprovalInboxService();
-            foreach ($this->tenant->companies(true) as $company) {
-                try {
-                    $approvalItems = array_merge($approvalItems, $approvalService->pending((int) $company['id']));
-                } catch (\Throwable) {
-                    // Optional workflow migrations should not make the dashboard unavailable.
-                }
-            }
-            usort($approvalItems, static fn (array $a, array $b): int => strcmp((string) $b['created_at'], (string) $a['created_at']));
-            $approvalItems = array_slice($approvalItems, 0, 6);
-        }
-
-        $onboardingScope = $this->tenant->sql('e.company_id', 'dashboard_onboarding');
-        $onboardingEmployees = $db->fetchAll(
-            'SELECT e.id, e.first_name, e.last_name, e.employee_code, e.joining_date,
-                    d.name AS department_name, ds.name AS designation_name
-             FROM employees e
-             LEFT JOIN departments d ON d.id = e.department_id
-             LEFT JOIN designations ds ON ds.id = e.designation_id
-             WHERE e.deleted_at IS NULL
-               AND e.joining_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
-               AND (' . $onboardingScope['sql'] . ')
-             ORDER BY e.joining_date, e.id LIMIT 6',
-            $onboardingScope['params']
-        );
-
-        $latestPayrollTotal = (float) ($recentPayroll[0]['total_net'] ?? 0);
 
         $role = (string) ($this->user()['primary_role'] ?? 'company_admin');
         $profiles = [
@@ -132,19 +149,18 @@ class DashboardController extends Controller
         }
 
         $this->view('admin/dashboard/index', [
-            'title' => 'Dashboard',
-            'stats' => $stats,
-            'attendanceTrend' => $attendanceTrend,
+            'title'               => 'Dashboard',
+            'stats'               => $stats,
+            'attendanceTrend'     => $attendanceTrend,
             'attendanceExceptions' => $attendanceExceptions,
             'departmentHeadcount' => $departmentHeadcount,
-            'recentLeaves' => $recentLeaves,
-            'recentPayroll' => $recentPayroll,
-            'dashboardProfile' => $dashboardProfile,
-            'setup' => $setup,
-            'role' => $role,
-            'approvalItems' => $approvalItems,
-            'onboardingEmployees' => $onboardingEmployees,
-            'latestPayrollTotal' => $latestPayrollTotal,
+            'recentLeaves'        => $recentLeaves,
+            'onLeaveToday'  => $onLeaveToday,
+            'noShowToday'   => $noShowToday,
+            'recentJoiners' => $recentJoiners,
+            'dashboardProfile'    => $dashboardProfile,
+            'setup'               => $setup,
+            'role'                => $role,
         ]);
     }
 

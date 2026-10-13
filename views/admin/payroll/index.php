@@ -5,10 +5,10 @@
     </div>
     <div class="d-flex gap-2">
         <?php if (can('payroll.view_archived')): ?>
-            <a href="/admin/payroll/archived" class="btn btn-outline-secondary btn-sm">Archived</a>
+            <a href="/admin/payroll/archived" class="btn btn-soft btn-sm">Archived</a>
         <?php endif; ?>
         <?php if (can('payroll.process')): ?>
-            <a href="/admin/payroll/create" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New Period</a>
+            <a href="/admin/payroll/create" class="btn btn-primary btn-sm"><i data-lucide="plus" style="width:14px;height:14px" class="me-1"></i> New Period</a>
         <?php endif; ?>
     </div>
 </div>

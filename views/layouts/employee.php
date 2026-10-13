@@ -28,6 +28,10 @@ $workspaceAccent = $activeWs['accent'] ?? 'purple';
     <link href="<?= asset('css/saas-theme.css') ?>" rel="stylesheet">
     <link href="<?= asset('css/approved-theme.css') ?>" rel="stylesheet">
     <link href="<?= asset('css/instant-ui.css') ?>" rel="stylesheet">
+    <link href="<?= asset('css/wow.css') ?>" rel="stylesheet">
+    <link href="<?= asset('css/timeclock.css') ?>" rel="stylesheet">
+    <link href="<?= asset('css/ui-polish.css') ?>" rel="stylesheet">
+    <link href="<?= asset('css/dark-palette.css') ?>" rel="stylesheet">
 </head>
 <body class="app-body has-workspace-nav">
 <script>
@@ -80,9 +84,16 @@ html.ems-sidebar-collapsed-pending .app-shell .sidebar-link .sidebar-icon { disp
                     <i data-lucide="sun" id="themeIconLight" style="width:16px;height:16px"></i>
                     <i data-lucide="moon" id="themeIconDark" style="width:16px;height:16px;display:none"></i>
                 </button>
-                <a href="/employee/attendance" class="btn btn-sm btn-primary d-none d-sm-inline-flex">
-                    <i data-lucide="camera" class="me-1" style="width:14px;height:14px"></i>Check In/Out
-                </a>
+                <div class="dropdown" id="tcDropdown">
+                    <button class="btn btn-sm btn-primary d-none d-sm-inline-flex" type="button"
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
+                            id="tcDropdownBtn">
+                        <i data-lucide="camera" class="me-1" style="width:14px;height:14px"></i>Check In/Out
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:420px;max-width:96vw" id="tcDropdownMenu">
+                        <?php include config('app.paths.views') . '/partials/timeclock-widget.php'; ?>
+                    </div>
+                </div>
                 <div class="dropdown">
                     <button class="btn btn-sm btn-soft position-relative" data-bs-toggle="dropdown" id="notifBtn" aria-label="Notifications">
                         <i data-lucide="bell"></i>

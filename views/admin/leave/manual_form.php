@@ -61,17 +61,12 @@
                         </select>
                     </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-sm-6">
-                            <label class="form-label" for="start_date">Start Date <span class="text-danger">*</span></label>
-                            <input type="date" name="start_date" id="start_date" class="form-control" required
-                                   value="<?= e($_POST['start_date'] ?? '') ?>">
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="form-label" for="end_date">End Date <span class="text-danger">*</span></label>
-                            <input type="date" name="end_date" id="end_date" class="form-control" required
-                                   value="<?= e($_POST['end_date'] ?? '') ?>">
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date Range <span class="text-danger">*</span></label>
+                        <input type="hidden" name="start_date" id="start_date" required value="<?= e($_POST['start_date'] ?? '') ?>">
+                        <input type="hidden" name="end_date" id="end_date" required value="<?= e($_POST['end_date'] ?? '') ?>">
+                        <div id="leaveDatePicker" class="border rounded p-2" style="background:var(--ems-surface,#fff)"></div>
+                        <div id="leaveDateDisplay" class="form-text mt-1">No dates selected.</div>
                     </div>
 
                     <div class="mb-3">
@@ -113,3 +108,63 @@
         </div>
     </div>
 </div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+<style>
+#leaveDatePicker .flatpickr-calendar { box-shadow: none; border: none; width: 100%; }
+#leaveDatePicker .flatpickr-rContainer { width: 100%; }
+#leaveDatePicker .flatpickr-days, #leaveDatePicker .dayContainer { width: 100% !important; min-width: 0 !important; max-width: 100% !important; }
+[data-theme="dark"] #leaveDatePicker { background: var(--ems-surface-alt, #1e293b); }
+[data-theme="dark"] #leaveDatePicker .flatpickr-calendar,
+[data-theme="dark"] #leaveDatePicker .flatpickr-months,
+[data-theme="dark"] #leaveDatePicker .flatpickr-weekdays,
+[data-theme="dark"] #leaveDatePicker .flatpickr-days { background: var(--ems-surface-alt, #1e293b); color: var(--ems-text, #f1f5f9); }
+[data-theme="dark"] #leaveDatePicker .flatpickr-day { color: var(--ems-text, #f1f5f9); }
+[data-theme="dark"] #leaveDatePicker .flatpickr-day:hover { background: var(--ems-primary, #3b82f6); }
+[data-theme="dark"] #leaveDatePicker .flatpickr-day.selected,
+[data-theme="dark"] #leaveDatePicker .flatpickr-day.inRange { background: var(--ems-primary, #3b82f6); border-color: var(--ems-primary, #3b82f6); }
+[data-theme="dark"] #leaveDatePicker .flatpickr-day.flatpickr-disabled { color: #4b5563; }
+</style>
+<script>
+(function () {
+    var initStart = <?= json_encode($_POST['start_date'] ?? '') ?>;
+    var initEnd   = <?= json_encode($_POST['end_date']   ?? '') ?>;
+    var defaultDate = (initStart && initEnd) ? [initStart, initEnd] : (initStart ? [initStart] : []);
+
+    var fp = flatpickr('#leaveDatePicker', {
+        inline: true,
+        mode: 'range',
+        dateFormat: 'Y-m-d',
+        defaultDate: defaultDate,
+        onChange: function (selectedDates) {
+            var display = document.getElementById('leaveDateDisplay');
+            if (selectedDates.length === 2) {
+                var fmt = { day: '2-digit', month: 'short', year: 'numeric' };
+                document.getElementById('start_date').value = selectedDates[0].toISOString().slice(0, 10);
+                document.getElementById('end_date').value   = selectedDates[1].toISOString().slice(0, 10);
+                display.textContent = selectedDates[0].toLocaleDateString('en-GB', fmt) +
+                    ' → ' + selectedDates[1].toLocaleDateString('en-GB', fmt);
+                display.style.color = '';
+            } else if (selectedDates.length === 1) {
+                document.getElementById('start_date').value = selectedDates[0].toISOString().slice(0, 10);
+                document.getElementById('end_date').value   = '';
+                display.textContent = 'Select end date…';
+                display.style.color = 'var(--ems-text-muted, #6b7280)';
+            } else {
+                document.getElementById('start_date').value = '';
+                document.getElementById('end_date').value   = '';
+                display.textContent = 'No dates selected.';
+            }
+        }
+    });
+
+    if (initStart && initEnd) {
+        var s = new Date(initStart + 'T00:00:00');
+        var e = new Date(initEnd   + 'T00:00:00');
+        var fmt = { day: '2-digit', month: 'short', year: 'numeric' };
+        document.getElementById('leaveDateDisplay').textContent =
+            s.toLocaleDateString('en-GB', fmt) + ' → ' + e.toLocaleDateString('en-GB', fmt);
+    }
+})();
+</script>

@@ -1,22 +1,21 @@
 <?php /** @var array $employee */ ?>
-<div class="container-fluid py-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <div>
-            <h1 class="h4 mb-1"><?= e(trim(($employee['first_name'] ?? '') . ' ' . ($employee['last_name'] ?? ''))) ?></h1>
-            <p class="text-muted small mb-0"><?= e($employee['employee_code'] ?? '') ?> · <?= status_badge($employee['employment_status'] ?? 'active') ?></p>
-        </div>
-        <div class="d-flex gap-2">
-            <?php if (can('employees.update')): ?>
-                <a href="/admin/employees/<?= (int) $employee['id'] ?>/edit" class="btn btn-outline-secondary btn-sm">Edit</a>
-            <?php endif; ?>
-            <?php if (can('employees.delete')): ?>
-                <form method="POST" action="/admin/employees/<?= (int) $employee['id'] ?>/delete" class="d-inline" onsubmit="return confirm('Deactivate this employee?')">
-                    <?= csrf_field() ?>
-                    <button class="btn btn-outline-danger btn-sm">Deactivate</button>
-                </form>
-            <?php endif; ?>
-        </div>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1><?= e(trim(($employee['first_name'] ?? '') . ' ' . ($employee['last_name'] ?? ''))) ?></h1>
+        <p class="subtitle"><?= e($employee['employee_code'] ?? '') ?> · <?= status_badge($employee['employment_status'] ?? 'active') ?></p>
     </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <?php if (can('employees.update')): ?>
+            <a href="/admin/employees/<?= (int) $employee['id'] ?>/edit" class="btn btn-soft btn-sm"><i data-lucide="pencil" style="width:14px;height:14px" class="me-1"></i>Edit</a>
+        <?php endif; ?>
+        <?php if (can('employees.delete')): ?>
+            <form method="POST" action="/admin/employees/<?= (int) $employee['id'] ?>/delete" class="d-inline" onsubmit="return confirm('Deactivate this employee?')">
+                <?= csrf_field() ?>
+                <button class="btn btn-outline-danger btn-sm">Deactivate</button>
+            </form>
+        <?php endif; ?>
+    </div>
+</div>
 
     <?php include config('app.paths.views') . '/partials/alerts.php'; ?>
 
@@ -131,4 +130,3 @@
             <?php endif; ?>
         </div>
     </div>
-</div>

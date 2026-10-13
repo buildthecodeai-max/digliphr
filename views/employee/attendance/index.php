@@ -11,6 +11,24 @@ $canCheckOut = $today['can_check_out'] ?? false;
 $remoteAllowed = $today['remote_allowed'] ?? false;
 $attendanceSecurityMode = $attendanceSecurityMode ?? 'disabled';
 ?>
+<!-- Timeclock widget is mounted from the layout dropdown into here -->
+<div id="tcInlineMountPoint" class="mb-3"></div>
+<script>
+(function() {
+    function mountTcWidget() {
+        var widget = document.getElementById('tcWidget');
+        var mount  = document.getElementById('tcInlineMountPoint');
+        if (widget && mount && !mount.contains(widget)) {
+            mount.appendChild(widget);
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', mountTcWidget);
+    } else {
+        mountTcWidget();
+    }
+})();
+</script>
 <div class="page-header">
     <div>
         <h1>My Attendance</h1>

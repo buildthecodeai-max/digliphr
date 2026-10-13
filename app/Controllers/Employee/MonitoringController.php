@@ -102,4 +102,41 @@ class MonitoringController extends Controller
     {
         throw new HttpException('Work monitoring is managed by your company administrators and is not available in the employee portal.', 403);
     }
+
+    /** Page that generates a one-time token the desktop agent exchanges for credentials. */
+    public function agentConnect(): void
+    {
+        $db = \App\Core\Database::getInstance();
+        $employee = $this->employee();
+        if (!$employee) {
+            $this->redirect('/login');
+        }
+
+        $deviceUid = trim((string) $this->request->query('device_uid', ''));
+        $token     = null;
+        $expires   = null;
+
+        if ($deviceUid !== '' && $db->tableExists('monitoring_agent_links')) {
+            $plain   = bin2hex(random_bytes(16));
+            $hash    = hash('sha256', $plain);
+            $expires = date('Y-m-d H:i:s', time() + 300);
+
+            $db->query(
+                'INSERT INTO monitoring_agent_links (device_uid, employee_id, token_hash, expires_at, created_at)
+                 VALUES (:uid, :eid, :hash, :exp, NOW())
+                 ON DUPLICATE KEY UPDATE token_hash = VALUES(token_hash), expires_at = VALUES(expires_at),
+                                          used_at = NULL, created_at = NOW()',
+                ['uid' => $deviceUid, 'eid' => (int) $employee['id'], 'hash' => $hash, 'exp' => $expires]
+            );
+            $token = $plain;
+        }
+
+        $this->view('employee/monitoring/agent-connect', [
+            'title'     => 'Connect Desktop Agent',
+            'deviceUid' => $deviceUid,
+            'token'     => $token,
+            'expires'   => $expires,
+            'employee'  => $employee,
+        ]);
+    }
 }

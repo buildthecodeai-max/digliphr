@@ -1,13 +1,14 @@
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h1 class="h4 mb-0"><?= e($title ?? 'Leave Requests') ?></h1>
-    <div class="d-flex gap-2">
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1><?= e($title ?? 'Leave Requests') ?></h1>
+        <p class="subtitle">Review, approve and manage employee leave applications</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
         <?php if (can('leave.view_archived')): ?>
-        <a href="/admin/leave/archived" class="btn btn-outline-secondary btn-sm">Archived</a>
+        <a href="/admin/leave/archived" class="btn btn-soft btn-sm">Archived</a>
         <?php endif; ?>
-        <a href="/admin/leave/pending" class="btn btn-outline-secondary btn-sm">Pending</a>
-        <a href="/admin/leave/approved" class="btn btn-outline-secondary btn-sm">Approved</a>
         <?php if (can('leave.edit')): ?>
-        <a href="/admin/leave/allocate" class="btn btn-outline-secondary btn-sm">
+        <a href="/admin/leave/allocate" class="btn btn-soft btn-sm">
             <i data-lucide="calendar-check" class="me-1" style="width:14px;height:14px"></i>Allocate Leaves
         </a>
         <?php endif; ?>
@@ -56,19 +57,42 @@
     </div>
 </div>
 
+<?php if (can('leave.archive')): ?>
+<form method="POST" action="/admin/leave/bulk-archive" id="bulkForm">
+    <?= csrf_field() ?>
+    <input type="hidden" name="reason" id="bulkReason">
+
+    <div id="bulkBar" class="card mb-2 border-warning" style="display:none">
+        <div class="card-body py-2 d-flex align-items-center gap-2 flex-wrap">
+            <span class="fw-semibold small text-warning"><span id="bulkCount">0</span> selected</span>
+            <input type="text" id="bulkReasonInput" class="form-control form-control-sm" style="max-width:220px" placeholder="Archive reason (required)">
+            <button type="button" class="btn btn-danger btn-sm" id="bulkArchiveBtn">
+                <i data-lucide="archive" style="width:13px;height:13px" class="me-1"></i>Archive Selected
+            </button>
+            <button type="button" class="btn btn-soft btn-sm ms-auto" id="bulkClear">Clear selection</button>
+        </div>
+    </div>
+<?php endif; ?>
+
 <div class="card">
     <div class="table-responsive">
         <table class="table table-sm table-hover mb-0 align-middle">
             <thead class="table-light">
             <tr>
+                <?php if (can('leave.archive')): ?>
+                <th style="width:32px"><input type="checkbox" class="form-check-input" id="selectAll" title="Select all"></th>
+                <?php endif; ?>
                 <th>#</th><th>Employee</th><th>Type</th><th>Dates</th><th>Days</th><th>Status</th><th></th>
             </tr>
             </thead>
             <tbody>
             <?php if (empty($requests)): ?>
-                <tr><td colspan="7" class="text-center text-muted py-4">No leave requests found.</td></tr>
+                <tr><td colspan="<?= can('leave.archive') ? 8 : 7 ?>" class="text-center text-muted py-4">No leave requests found.</td></tr>
             <?php else: foreach ($requests as $row): ?>
                 <tr>
+                    <?php if (can('leave.archive')): ?>
+                    <td><input type="checkbox" class="form-check-input row-check" name="ids[]" value="<?= (int)$row['id'] ?>"></td>
+                    <?php endif; ?>
                     <td><?= (int)$row['id'] ?></td>
                     <td>
                         <div class="fw-semibold"><?= e($row['employee_name'] ?? '') ?></div>
@@ -105,3 +129,64 @@
         <div class="card-footer py-2"><?= paginate_links($paginator, '/admin/leave?' . http_build_query(array_filter($filters ?? []))) ?></div>
     <?php endif; ?>
 </div>
+
+<?php if (can('leave.archive')): ?>
+</form>
+<script>
+(function () {
+    var form    = document.getElementById('bulkForm');
+    var bar     = document.getElementById('bulkBar');
+    var counter = document.getElementById('bulkCount');
+    var selectAll  = document.getElementById('selectAll');
+    var archiveBtn = document.getElementById('bulkArchiveBtn');
+    var clearBtn   = document.getElementById('bulkClear');
+    var reasonInp  = document.getElementById('bulkReasonInput');
+
+    function getChecked() {
+        return Array.from(document.querySelectorAll('.row-check:checked'));
+    }
+
+    function update() {
+        var checked = getChecked();
+        counter.textContent = checked.length;
+        bar.style.display = checked.length > 0 ? '' : 'none';
+        if (selectAll) {
+            var all = document.querySelectorAll('.row-check');
+            selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+            selectAll.checked = all.length > 0 && checked.length === all.length;
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    document.querySelectorAll('.row-check').forEach(function (cb) {
+        cb.addEventListener('change', update);
+    });
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            document.querySelectorAll('.row-check').forEach(function (cb) { cb.checked = selectAll.checked; });
+            update();
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+            document.querySelectorAll('.row-check').forEach(function (cb) { cb.checked = false; });
+            if (selectAll) selectAll.checked = false;
+            update();
+        });
+    }
+
+    if (archiveBtn) {
+        archiveBtn.addEventListener('click', function () {
+            var reason = reasonInp.value.trim();
+            if (!reason) { reasonInp.focus(); reasonInp.classList.add('is-invalid'); return; }
+            reasonInp.classList.remove('is-invalid');
+            if (!confirm('Archive ' + getChecked().length + ' leave request(s)?')) return;
+            document.getElementById('bulkReason').value = reason;
+            form.submit();
+        });
+    }
+})();
+</script>
+<?php endif; ?>

@@ -2,11 +2,15 @@
 /** @var array $records */
 /** @var array $filters */
 ?>
-<div class="container-fluid py-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h4 mb-0">Correction Requests</h1>
-        <a href="/admin/attendance" class="btn btn-outline-secondary btn-sm">Back to Attendance</a>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1>Correction Requests</h1>
+        <p class="subtitle">Review and approve attendance correction requests</p>
     </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/admin/attendance" class="btn btn-soft btn-sm"><i data-lucide="arrow-left" style="width:14px;height:14px" class="me-1"></i>Back to Attendance</a>
+    </div>
+</div>
     <?php include config('app.paths.views') . '/partials/alerts.php'; ?>
     <div class="card mb-3">
         <div class="card-body py-2">
@@ -72,4 +76,3 @@
         <div class="card-footer py-2"><?= paginate_links($records, '/admin/attendance/corrections?' . http_build_query(array_filter($filters))) ?></div>
         <?php endif; ?>
     </div>
-</div>

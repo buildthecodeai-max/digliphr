@@ -291,8 +291,8 @@ class ReportService
              FROM attendance a
              INNER JOIN employees e ON e.id = a.employee_id
              LEFT JOIN departments d ON d.id = e.department_id
-             LEFT JOIN branches b ON b.id = e.branch_id
-             LEFT JOIN shifts s ON s.id = a.shift_id
+             LEFT JOIN branches b ON b.id = COALESCE(a.branch_id, e.branch_id)
+             LEFT JOIN shifts s ON s.id = COALESCE(a.shift_id, e.shift_id)
              WHERE {$where}
              ORDER BY a.attendance_date DESC, e.first_name ASC
              LIMIT {$perPage} OFFSET {$offset}",
@@ -476,9 +476,10 @@ class ReportService
             'balance_company'
         );
         $balances = $this->db->fetchAll(
-            "SELECT CONCAT(e.first_name,' ',e.last_name) AS employee_name, e.employee_code,
+            "SELECT e.id AS employee_id, CONCAT(e.first_name,' ',e.last_name) AS employee_name, e.employee_code,
                     lt.name AS leave_type,
-                    elb.opening_balance, elb.accrued, elb.used, elb.pending, elb.carried_forward, elb.closing_balance
+                    elb.opening_balance, elb.accrued, elb.used, elb.pending, elb.carried_forward, elb.closing_balance,
+                    elb.year
              FROM employee_leave_balances elb
              INNER JOIN employees e ON e.id = elb.employee_id
              INNER JOIN leave_types lt ON lt.id = elb.leave_type_id

@@ -30,6 +30,9 @@ $workspaceAccent = $activeWs['accent'] ?? 'purple';
     <link href="<?= asset('css/reports.css') ?>" rel="stylesheet">
     <link href="<?= asset('css/instant-ui.css') ?>" rel="stylesheet">
     <link href="<?= asset('css/wow.css') ?>" rel="stylesheet">
+    <link href="<?= asset('css/cmd-palette.css') ?>" rel="stylesheet">
+    <link href="<?= asset('css/ui-polish.css') ?>" rel="stylesheet">
+    <link href="<?= asset('css/dark-palette.css') ?>" rel="stylesheet">
     <script>
     (function () {
         try {
@@ -64,12 +67,11 @@ $workspaceAccent = $activeWs['accent'] ?? 'purple';
                 </div>
                 <div class="topbar-title"><?= e($title ?? '') ?></div>
             </div>
-            <div class="topbar-search position-relative ms-3 d-none d-md-block flex-grow-1">
-                <i data-lucide="search" class="search-icon"></i>
-                <input type="search" class="form-control form-control-sm" placeholder="Search employees, documents…" aria-label="Global search" id="globalSearch" autocomplete="off">
-                <div class="global-search-hints small text-muted d-none" id="globalSearchHints">Search employees by name or code</div>
-                <div class="global-search-results d-none" id="globalSearchResults" role="listbox" aria-label="Employee search results"></div>
-            </div>
+            <button type="button" class="cmd-topbar-trigger ms-3 d-none d-md-inline-flex" onclick="window.EMS && EMS.openCmdPalette()" aria-label="Open command palette (Ctrl+K)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Search employees, pages…
+                <kbd>Ctrl+K</kbd>
+            </button>
             <div class="topbar-actions ms-auto d-flex align-items-center gap-2">
                 <button type="button" class="btn btn-sm btn-soft" id="themeToggleBtn" aria-label="Toggle dark/light mode" title="Toggle theme">
                     <i data-lucide="sun" id="themeIconLight" style="width:16px;height:16px"></i>
@@ -172,6 +174,7 @@ $workspaceAccent = $activeWs['accent'] ?? 'purple';
 <script src="<?= asset('js/appearance.js') ?>"></script>
 <script src="<?= asset('js/workspace-nav.js') ?>"></script>
 <script src="<?= asset('js/design-system.js') ?>"></script>
+<script src="<?= asset('js/cmd-palette.js') ?>"></script>
 <script>if (window.lucide) lucide.createIcons();</script>
 <script>
 (function () {

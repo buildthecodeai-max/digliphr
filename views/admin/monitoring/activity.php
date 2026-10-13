@@ -1,6 +1,10 @@
 <?php /** @var array $records */ /** @var array $filters */ ?>
-<div class="container-fluid py-3">
-    <h1 class="h4 mb-3">Activity</h1>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1>Activity</h1>
+        <p class="subtitle">Monitor employee application and window activity</p>
+    </div>
+</div>
     <form class="row g-2 mb-3" method="get">
         <div class="col-auto"><input type="date" name="date_from" class="form-control form-control-sm" value="<?= e($filters['date_from'] ?? '') ?>"></div>
         <div class="col-auto"><input type="date" name="date_to" class="form-control form-control-sm" value="<?= e($filters['date_to'] ?? '') ?>"></div>
@@ -25,4 +29,3 @@
             </tbody>
         </table>
     </div>
-</div>

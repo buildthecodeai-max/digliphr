@@ -160,19 +160,21 @@
 document.addEventListener('DOMContentLoaded', function () {
     if (window.lucide) lucide.createIcons();
     const rows = <?= json_encode($attendanceWeek ?? [], JSON_UNESCAPED_UNICODE) ?>;
-    if (!window.EMSCharts || !rows.length) return;
-    const presentStatuses = ['present','late','remote','manual','half_day'];
-    EMSCharts.line('empAttendanceChart', rows.map(r => r.attendance_date), [{
-        label: 'Present',
-        data: rows.map(r => presentStatuses.includes(r.status) ? 1 : 0),
-        borderColor: EMSCharts.palette.present,
-        backgroundColor: 'rgba(34,197,94,.14)',
-    }, {
-        label: 'Absent / Leave',
-        data: rows.map(r => ['absent','on_leave'].includes(r.status) ? 1 : 0),
-        borderColor: EMSCharts.palette.absent,
-        backgroundColor: 'rgba(239,68,68,.10)',
-    }]);
+    if (window.EMSCharts && rows.length) {
+        const presentStatuses = ['present','late','remote','manual','half_day'];
+        EMSCharts.line('empAttendanceChart', rows.map(r => r.attendance_date), [{
+            label: 'Present',
+            data: rows.map(r => presentStatuses.includes(r.status) ? 1 : 0),
+            borderColor: EMSCharts.palette.present,
+            backgroundColor: 'rgba(34,197,94,.14)',
+        }, {
+            label: 'Absent / Leave',
+            data: rows.map(r => ['absent','on_leave'].includes(r.status) ? 1 : 0),
+            borderColor: EMSCharts.palette.absent,
+            backgroundColor: 'rgba(239,68,68,.10)',
+        }]);
+    }
 });
 </script>
+
 <?php endif; ?>

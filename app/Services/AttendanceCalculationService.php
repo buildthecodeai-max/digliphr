@@ -375,8 +375,8 @@ class AttendanceCalculationService
                         AND a.attendance_date < CURDATE()
                         AND a.status NOT IN ('on_leave','holiday','weekend','absent'))) AS missing_checkout_days,
                 SUM(a.early_leave_minutes > 0) AS early_departure_days,
-                COALESCE(SUM(a.work_minutes), 0) AS worked_minutes,
-                COALESCE(SUM(a.overtime_minutes), 0) AS overtime_minutes,
+                COALESCE(SUM(CASE WHEN a.check_out_at IS NOT NULL THEN a.work_minutes ELSE 0 END), 0) AS worked_minutes,
+                COALESCE(SUM(CASE WHEN a.check_out_at IS NOT NULL THEN a.overtime_minutes ELSE 0 END), 0) AS overtime_minutes,
                 COALESCE(SUM(a.expected_work_minutes), 0) AS required_minutes,
                 COALESCE(SUM(a.late_minutes), 0) AS late_minutes_total,
                 0 AS missing_checkout_open,
@@ -716,9 +716,10 @@ class AttendanceCalculationService
                 $classification['label'] .= ' (Pending Regularization)';
             }
 
-            $worked = (int) ($row['work_minutes'] ?? 0);
+            $hasCheckout = !empty($row['check_out_at']);
+            $worked   = $hasCheckout ? (int) ($row['work_minutes'] ?? 0) : 0;
             $required = (int) ($row['expected_work_minutes'] ?? 0);
-            $overtime = (int) ($row['overtime_minutes'] ?? 0);
+            $overtime = $hasCheckout ? (int) ($row['overtime_minutes'] ?? 0) : 0;
             $undertime = $row ? max(0, $required - $worked - $overtime) : 0;
 
             $days[] = [

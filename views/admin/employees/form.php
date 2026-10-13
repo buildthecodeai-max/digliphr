@@ -2,11 +2,12 @@
 $isEdit = !empty($employee);
 $shifts = $shifts ?? [];
 ?>
-<div class="container-fluid py-3">
-    <div class="mb-3">
-        <h1 class="h4 mb-1"><?= e($title ?? ($isEdit ? 'Edit Employee' : 'Add Employee')) ?></h1>
-        <p class="text-muted small mb-0"><?= $isEdit ? 'Update employee profile details' : 'Create a new employee record' ?></p>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1><?= e($title ?? ($isEdit ? 'Edit Employee' : 'Add Employee')) ?></h1>
+        <p class="subtitle"><?= $isEdit ? 'Update employee profile details' : 'Create a new employee record' ?></p>
     </div>
+</div>
 
     <?php include config('app.paths.views') . '/partials/alerts.php'; ?>
 
@@ -164,4 +165,3 @@ $shifts = $shifts ?? [];
             </form>
         </div>
     </div>
-</div>

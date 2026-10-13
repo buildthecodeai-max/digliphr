@@ -11,10 +11,10 @@ class NotificationController extends Controller
 {
     public function index(): void
     {
-        $this->authorize('notifications.view');
         $userId = $this->user()['id'] ?? 0;
-        $rows = Database::getInstance()->fetchAll(
-            'SELECT * FROM notifications WHERE user_id = :uid ORDER BY created_at DESC LIMIT 100',
+        $db = Database::getInstance();
+        $rows = $db->fetchAll(
+            'SELECT * FROM notifications WHERE user_id = :uid ORDER BY created_at DESC LIMIT 300',
             ['uid' => $userId]
         );
         $this->view('admin/announcements/notifications', [

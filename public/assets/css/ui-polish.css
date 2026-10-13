@@ -1,0 +1,691 @@
+/* =============================================================
+   Diglip HR — UI Polish
+   Standardises buttons, forms, tables, modals, badges & spacing
+   across all inner pages (admin + employee modules).
+   Loads after app.css / wow.css so overrides are additive.
+   ============================================================= */
+
+/* ── 1. PAGE HEADER LIFT ──────────────────────────────────── */
+/* Old-style headers that are bare d-flex rows get wrapped
+   into the EMS page-header card style by a parent selector */
+.page-header {
+    margin-bottom: 1.15rem;
+}
+.page-header h1 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    margin: 0;
+    color: var(--ems-text-heading);
+}
+.page-header .subtitle {
+    font-size: .84rem;
+    color: var(--ems-text-secondary);
+    margin: .3rem 0 0;
+    font-weight: 500;
+}
+
+/* Strip extra padding added by container-fluid py-3 wrappers */
+.app-content > .container-fluid {
+    padding-inline: 0;
+    padding-top: 0;
+}
+
+/* ── 2. BUTTON SYSTEM ─────────────────────────────────────── */
+
+/* --- Global button defaults --- */
+.btn {
+    border-radius: var(--ems-radius-sm) !important;
+    font-size: .84rem !important;
+    font-weight: 650 !important;
+    letter-spacing: -.01em;
+    transition: transform .14s ease, box-shadow .14s ease, background .14s ease,
+                border-color .14s ease, color .14s ease !important;
+}
+.btn:active { transform: translateY(0) scale(.98) !important; }
+.btn:disabled, .btn.disabled { opacity: .55 !important; transform: none !important; }
+
+/* --- Size normalisation (sm used throughout) --- */
+.btn-sm {
+    padding: .38rem .85rem !important;
+    font-size: .82rem !important;
+    min-height: 32px;
+    line-height: 1.4;
+}
+.btn:not(.btn-sm):not(.btn-xs):not(.btn-lg) {
+    padding: .48rem 1rem !important;
+    min-height: 36px;
+}
+.btn-xs {
+    padding: .22rem .55rem !important;
+    font-size: .75rem !important;
+    min-height: 26px;
+}
+/* Icon alignment inside buttons */
+.btn i[data-lucide], .btn svg, .btn [data-lucide] {
+    vertical-align: -2px;
+    flex-shrink: 0;
+}
+
+/* --- btn-outline-secondary → matches btn-soft appearance --- */
+.btn-outline-secondary {
+    background: var(--ems-surface) !important;
+    border-color: var(--ems-border) !important;
+    color: var(--ems-text) !important;
+    box-shadow: var(--ems-shadow-xs) !important;
+}
+.btn-outline-secondary:hover, .btn-outline-secondary:focus-visible {
+    background: var(--ems-soft-violet) !important;
+    color: var(--ems-primary) !important;
+    border-color: color-mix(in srgb, var(--ems-primary) 22%, transparent) !important;
+    transform: translateY(-1px);
+}
+
+/* --- btn-light → matches btn-soft appearance --- */
+.btn-light {
+    background: var(--ems-surface) !important;
+    border-color: var(--ems-border) !important;
+    color: var(--ems-text) !important;
+    box-shadow: var(--ems-shadow-xs) !important;
+}
+.btn-light:hover {
+    background: var(--ems-soft-violet) !important;
+    color: var(--ems-primary) !important;
+    border-color: color-mix(in srgb, var(--ems-primary) 22%, transparent) !important;
+    transform: translateY(-1px);
+}
+
+/* --- btn-secondary → neutral soft appearance --- */
+.btn-secondary {
+    background: var(--ems-bg-section) !important;
+    border-color: var(--ems-border) !important;
+    color: var(--ems-text) !important;
+    box-shadow: var(--ems-shadow-xs) !important;
+}
+.btn-secondary:hover {
+    background: var(--ems-soft-violet) !important;
+    color: var(--ems-primary) !important;
+    border-color: color-mix(in srgb, var(--ems-primary) 22%, transparent) !important;
+    transform: translateY(-1px);
+}
+
+/* --- btn-outline-primary → clear primary outline --- */
+.btn-outline-primary {
+    background: transparent !important;
+    border-color: var(--ems-primary) !important;
+    color: var(--ems-primary) !important;
+}
+.btn-outline-primary:hover {
+    background: var(--ems-primary-soft) !important;
+    transform: translateY(-1px);
+}
+
+/* --- btn-outline-danger → clear danger outline --- */
+.btn-outline-danger {
+    background: transparent !important;
+    border-color: var(--ems-danger) !important;
+    color: var(--ems-danger) !important;
+}
+.btn-outline-danger:hover {
+    background: var(--ems-danger-soft) !important;
+    transform: translateY(-1px);
+}
+
+/* --- btn-success consistent --- */
+.btn-success {
+    --bs-btn-bg: var(--ems-success);
+    --bs-btn-border-color: var(--ems-success);
+    box-shadow: 0 6px 14px rgba(34, 197, 94, .24) !important;
+}
+
+/* --- btn-warning consistent --- */
+.btn-warning {
+    --bs-btn-bg: var(--ems-warning);
+    --bs-btn-border-color: var(--ems-warning);
+    --bs-btn-color: #fff;
+}
+
+/* --- btn-danger consistent --- */
+.btn-danger {
+    --bs-btn-bg: var(--ems-danger);
+    --bs-btn-border-color: var(--ems-danger);
+    box-shadow: 0 6px 14px rgba(239, 68, 68, .22) !important;
+}
+
+/* --- Loading state (add .is-loading via JS) --- */
+.btn.is-loading {
+    pointer-events: none;
+    opacity: .75 !important;
+    position: relative;
+}
+.btn.is-loading::after {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-left: .45rem;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: btnSpin .7s linear infinite;
+    vertical-align: -2px;
+}
+@keyframes btnSpin { to { transform: rotate(360deg); } }
+
+/* ── 3. ICON NORMALISATION ────────────────────────────────── */
+/* Keep Lucide icons inside buttons crisp & same size */
+.btn i[data-lucide],
+.btn [data-lucide],
+button i[data-lucide] {
+    width: 14px !important;
+    height: 14px !important;
+    stroke-width: 2;
+}
+/* table action icon buttons */
+.action-btn i[data-lucide],
+.action-btn [data-lucide] {
+    width: 14px !important;
+    height: 14px !important;
+    stroke-width: 2;
+}
+
+/* ── 4. FORMS ─────────────────────────────────────────────── */
+
+/* Normalise all input heights */
+.form-control, .form-select {
+    border-radius: var(--ems-radius-xs) !important;
+    border-color: var(--ems-border) !important;
+    font-size: .84rem !important;
+    transition: border-color .15s ease, box-shadow .15s ease !important;
+}
+.form-control:focus, .form-select:focus {
+    border-color: color-mix(in srgb, var(--ems-primary) 45%, transparent) !important;
+    box-shadow: 0 0 0 .2rem var(--ems-primary-soft) !important;
+    outline: none !important;
+}
+/* Small variants */
+.form-control-sm, .form-select-sm {
+    height: 32px !important;
+    padding: .3rem .65rem !important;
+    font-size: .8rem !important;
+}
+/* Regular (no -sm) */
+.form-control:not(.form-control-sm):not(.form-control-lg):not(textarea),
+.form-select:not(.form-select-sm):not(.form-select-lg) {
+    height: 38px;
+    padding: .4rem .85rem;
+}
+/* Textarea */
+textarea.form-control {
+    height: auto;
+    min-height: 80px;
+}
+/* Labels */
+.form-label {
+    font-size: .8rem;
+    font-weight: 650;
+    color: var(--ems-text-secondary);
+    margin-bottom: .35rem;
+    letter-spacing: .01em;
+}
+.form-label.small, label.form-label.small { font-size: .75rem; }
+.form-text {
+    font-size: .73rem;
+    color: var(--ems-text-muted);
+    margin-top: .25rem;
+}
+
+/* ── 5. CARDS ─────────────────────────────────────────────── */
+
+/* Remove Bootstrap shadow utilities to standardise */
+.card.shadow-sm { box-shadow: var(--ems-shadow-xs) !important; }
+.card.shadow    { box-shadow: var(--ems-shadow-sm) !important; }
+
+/* card-header: remove Bootstrap bg overrides */
+.card-header.bg-white,
+.card-header.bg-light {
+    background: var(--ems-card-header-bg) !important;
+    border-color: var(--ems-border-soft) !important;
+    color: var(--ems-text-heading) !important;
+}
+.card-header {
+    font-size: .84rem;
+    font-weight: 700;
+    color: var(--ems-text-heading);
+}
+
+/* ── 6. TABLES ────────────────────────────────────────────── */
+
+/* table-sm rows: enough breathing room */
+.table-sm > :not(caption) > * > * {
+    padding: .55rem .75rem !important;
+}
+.table thead th {
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 700;
+    white-space: nowrap;
+}
+/* Hover rows */
+.table-hover > tbody > tr {
+    transition: background .13s ease;
+}
+
+/* Pagination */
+.pagination {
+    --bs-pagination-border-radius: 10px;
+    --bs-pagination-font-size: .8rem;
+    gap: .2rem;
+}
+.page-item .page-link {
+    border-radius: 10px !important;
+    border-color: var(--ems-border) !important;
+    color: var(--ems-text) !important;
+    background: var(--ems-surface) !important;
+    font-size: .8rem;
+    padding: .35rem .65rem;
+    min-width: 32px;
+    text-align: center;
+    transition: background .13s ease, color .13s ease;
+}
+.page-item.active .page-link {
+    background: var(--ems-primary) !important;
+    border-color: var(--ems-primary) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 10px var(--ems-primary-shadow);
+}
+.page-item.disabled .page-link { opacity: .45 !important; }
+.page-item .page-link:hover:not(.active) {
+    background: var(--ems-soft-violet) !important;
+    color: var(--ems-primary) !important;
+}
+
+/* ── 7. STATUS BADGES ─────────────────────────────────────── */
+.badge, .status-badge {
+    border-radius: 999px !important;
+    font-size: .7rem !important;
+    font-weight: 700 !important;
+    letter-spacing: .02em;
+    padding: .28em .7em !important;
+    white-space: nowrap;
+}
+/* Semantic status colours */
+.badge-present, .status-present { background: var(--ems-success-soft) !important; color: #15803D !important; }
+.badge-late,    .status-late    { background: var(--ems-warning-soft)  !important; color: #B45309 !important; }
+.badge-absent,  .status-absent  { background: var(--ems-danger-soft)   !important; color: #B91C1C !important; }
+.badge-on-leave,.status-on_leave{ background: var(--ems-info-soft)     !important; color: #1D4ED8 !important; }
+.badge-half-day,.status-half_day{ background: var(--ems-pending-soft)  !important; color: #6D28D9 !important; }
+
+/* ── 8. MODALS ────────────────────────────────────────────── */
+.modal-content {
+    border-radius: var(--ems-radius) !important;
+    border: 1px solid var(--ems-border) !important;
+    box-shadow: var(--ems-shadow-lg) !important;
+    overflow: hidden;
+}
+.modal-header {
+    border-bottom: 1px solid var(--ems-border-soft) !important;
+    padding: 1rem 1.25rem .9rem !important;
+    background: var(--ems-card-header-bg) !important;
+}
+.modal-header .modal-title {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--ems-text-heading);
+}
+.modal-header .btn-close { opacity: .55; }
+.modal-header .btn-close:hover { opacity: 1; }
+.modal-body {
+    padding: 1.15rem 1.25rem !important;
+}
+.modal-footer {
+    border-top: 1px solid var(--ems-border-soft) !important;
+    padding: .85rem 1.25rem !important;
+    background: var(--ems-bg-secondary) !important;
+    gap: .5rem;
+}
+
+/* ── 9. ALERTS / TOAST ────────────────────────────────────── */
+.alert {
+    border-radius: 12px !important;
+    border: none !important;
+    font-size: .84rem;
+    font-weight: 550;
+    padding: .75rem 1rem;
+}
+
+/* ── 10. EMPTY STATES ─────────────────────────────────────── */
+.empty-state {
+    padding: 2.8rem 1.5rem;
+    text-align: center;
+}
+.empty-state > i[data-lucide],
+.empty-state > svg,
+.empty-state > .bi {
+    width: 44px !important;
+    height: 44px !important;
+    display: block;
+    margin: 0 auto .85rem;
+    opacity: .7;
+    color: var(--ems-primary);
+}
+.empty-state strong { display: block; font-size: .9rem; color: var(--ems-text-heading); margin-bottom: .35rem; }
+.empty-state .small, .empty-state small { color: var(--ems-text-secondary); }
+
+/* ── 11. FILTER BAR CONSISTENCY ──────────────────────────── */
+.filter-bar .form-control-sm,
+.filter-bar .form-select-sm,
+.card .form-control-sm,
+.card .form-select-sm {
+    height: 32px !important;
+}
+
+/* ── 12. TYPOGRAPHY SCALE ─────────────────────────────────── */
+.h4.mb-0 { font-size: 1.3rem; font-weight: 700; letter-spacing: -.02em; }
+.h5.mb-0 { font-size: 1.1rem; font-weight: 700; letter-spacing: -.02em; }
+
+/* Workspace tab font */
+.workspace-tab {
+    font-size: .8rem;
+    font-weight: 650;
+}
+
+/* ── 13. DARK MODE OVERRIDES ──────────────────────────────── */
+
+/* --- Buttons in dark mode --- */
+html[data-theme="dark"] .btn-outline-secondary {
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.1) !important;
+    color: #94a3b8 !important;
+}
+html[data-theme="dark"] .btn-outline-secondary:hover {
+    background: rgba(32,212,131,.1) !important;
+    border-color: rgba(32,212,131,.3) !important;
+    color: #20d483 !important;
+}
+html[data-theme="dark"] .btn-light {
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.1) !important;
+    color: #94a3b8 !important;
+}
+html[data-theme="dark"] .btn-light:hover {
+    background: rgba(32,212,131,.1) !important;
+    color: #20d483 !important;
+}
+html[data-theme="dark"] .btn-secondary {
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.1) !important;
+    color: #94a3b8 !important;
+}
+html[data-theme="dark"] .btn-secondary:hover {
+    background: rgba(32,212,131,.1) !important;
+    color: #20d483 !important;
+}
+html[data-theme="dark"] .btn-outline-primary {
+    border-color: rgba(32,212,131,.4) !important;
+    color: #20d483 !important;
+    background: transparent !important;
+}
+html[data-theme="dark"] .btn-outline-primary:hover {
+    background: rgba(32,212,131,.1) !important;
+}
+html[data-theme="dark"] .btn-outline-danger {
+    border-color: rgba(248,113,113,.4) !important;
+    color: #f87171 !important;
+    background: transparent !important;
+}
+html[data-theme="dark"] .btn-outline-danger:hover {
+    background: rgba(248,113,113,.1) !important;
+}
+html[data-theme="dark"] .btn-outline-success {
+    border-color: rgba(32,212,131,.4) !important;
+    color: #20d483 !important;
+    background: transparent !important;
+}
+html[data-theme="dark"] .btn-outline-success:hover {
+    background: rgba(32,212,131,.1) !important;
+}
+
+/* --- Forms in dark mode --- */
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select {
+    background: rgba(255,255,255,.04) !important;
+    border-color: rgba(96,165,250,.18) !important;
+    color: #e2e8f0 !important;
+}
+html[data-theme="dark"] .form-control:focus,
+html[data-theme="dark"] .form-select:focus {
+    background: rgba(255,255,255,.06) !important;
+    border-color: rgba(32,212,131,.45) !important;
+    box-shadow: 0 0 0 .2rem rgba(32,212,131,.15) !important;
+}
+html[data-theme="dark"] .form-control::placeholder { color: rgba(148,163,184,.55) !important; }
+html[data-theme="dark"] .form-label { color: #94a3b8 !important; }
+html[data-theme="dark"] .form-select option { background: #0d1b2a; color: #e2e8f0; }
+html[data-theme="dark"] .form-check-input {
+    background-color: rgba(255,255,255,.07) !important;
+    border-color: rgba(96,165,250,.25) !important;
+}
+html[data-theme="dark"] .form-check-input:checked {
+    background-color: #20d483 !important;
+    border-color: #20d483 !important;
+}
+
+/* --- Cards in dark mode --- */
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .ems-card {
+    background: #0d1b2a !important;
+    border-color: rgba(96,165,250,.1) !important;
+}
+html[data-theme="dark"] .card-header,
+html[data-theme="dark"] .ems-card-header {
+    background: rgba(255,255,255,.02) !important;
+    border-color: rgba(96,165,250,.1) !important;
+    color: #f1f5f9 !important;
+}
+html[data-theme="dark"] .card-header.bg-white,
+html[data-theme="dark"] .card-header.bg-light {
+    background: rgba(255,255,255,.02) !important;
+    border-color: rgba(96,165,250,.1) !important;
+    color: #f1f5f9 !important;
+}
+html[data-theme="dark"] .card-footer {
+    background: rgba(255,255,255,.02) !important;
+    border-color: rgba(96,165,250,.1) !important;
+}
+
+/* --- Page header in dark mode --- */
+html[data-theme="dark"] .page-header {
+    background: linear-gradient(135deg,
+        rgba(32,212,131,.07),
+        rgba(96,165,250,.05) 55%,
+        rgba(167,139,250,.04)) !important;
+    border-color: rgba(96,165,250,.1) !important;
+}
+html[data-theme="dark"] .page-header h1 { color: #f1f5f9 !important; }
+html[data-theme="dark"] .page-header .subtitle { color: #64748b !important; }
+
+/* --- Tables in dark mode --- */
+html[data-theme="dark"] .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: #cbd5e1;
+    --bs-table-striped-bg: rgba(255,255,255,.015);
+    --bs-table-hover-bg: rgba(32,212,131,.06);
+    --bs-table-border-color: rgba(96,165,250,.08);
+    color: #cbd5e1 !important;
+}
+html[data-theme="dark"] .table thead th {
+    background: rgba(255,255,255,.025) !important;
+    color: #64748b !important;
+    border-bottom-color: rgba(96,165,250,.1) !important;
+}
+html[data-theme="dark"] .table-light,
+html[data-theme="dark"] .table > :not(caption) > tr.table-light {
+    background: rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .table > :not(caption) > * > * {
+    border-bottom-color: rgba(96,165,250,.06) !important;
+    color: #cbd5e1 !important;
+}
+html[data-theme="dark"] .table-hover > tbody > tr:hover > * {
+    background-color: rgba(32,212,131,.06) !important;
+    color: #e2e8f0 !important;
+}
+
+/* --- Pagination dark mode --- */
+html[data-theme="dark"] .page-link {
+    background: rgba(255,255,255,.04) !important;
+    border-color: rgba(96,165,250,.12) !important;
+    color: #94a3b8 !important;
+}
+html[data-theme="dark"] .page-item.active .page-link {
+    background: #20d483 !important;
+    border-color: #20d483 !important;
+    color: #0a1e2a !important;
+}
+html[data-theme="dark"] .page-link:hover {
+    background: rgba(32,212,131,.12) !important;
+    color: #20d483 !important;
+}
+
+/* --- Modals dark mode --- */
+html[data-theme="dark"] .modal-content {
+    background: #0d1b2a !important;
+    border-color: rgba(96,165,250,.12) !important;
+}
+html[data-theme="dark"] .modal-header {
+    background: rgba(255,255,255,.025) !important;
+    border-color: rgba(96,165,250,.1) !important;
+}
+html[data-theme="dark"] .modal-header .modal-title { color: #f1f5f9 !important; }
+html[data-theme="dark"] .modal-header .btn-close { filter: invert(1); }
+html[data-theme="dark"] .modal-footer {
+    background: rgba(255,255,255,.015) !important;
+    border-color: rgba(96,165,250,.1) !important;
+}
+html[data-theme="dark"] .modal-backdrop { background: #000 !important; }
+
+/* --- Badges dark mode --- */
+html[data-theme="dark"] .bg-success, html[data-theme="dark"] .badge.bg-success, html[data-theme="dark"] .text-bg-success {
+    background: rgba(32,212,131,.14) !important; color: #34d399 !important;
+}
+html[data-theme="dark"] .bg-warning, html[data-theme="dark"] .badge.bg-warning, html[data-theme="dark"] .text-bg-warning {
+    background: rgba(245,158,11,.14) !important; color: #fbbf24 !important;
+}
+html[data-theme="dark"] .bg-danger, html[data-theme="dark"] .badge.bg-danger, html[data-theme="dark"] .text-bg-danger {
+    background: rgba(248,113,113,.12) !important; color: #f87171 !important;
+}
+html[data-theme="dark"] .bg-info, html[data-theme="dark"] .badge.bg-info, html[data-theme="dark"] .text-bg-info {
+    background: rgba(96,165,250,.14) !important; color: #60a5fa !important;
+}
+html[data-theme="dark"] .bg-primary, html[data-theme="dark"] .badge.bg-primary, html[data-theme="dark"] .text-bg-primary {
+    background: rgba(32,212,131,.14) !important; color: #20d483 !important;
+}
+html[data-theme="dark"] .bg-secondary, html[data-theme="dark"] .badge.bg-secondary, html[data-theme="dark"] .text-bg-secondary {
+    background: rgba(255,255,255,.07) !important; color: #94a3b8 !important;
+}
+html[data-theme="dark"] .bg-dark, html[data-theme="dark"] .badge.bg-dark, html[data-theme="dark"] .text-bg-dark {
+    background: rgba(255,255,255,.07) !important; color: #94a3b8 !important;
+}
+
+/* --- Empty states dark mode --- */
+html[data-theme="dark"] .empty-state {
+    background: radial-gradient(circle at top, rgba(32,212,131,.05), transparent 55%);
+    color: #64748b;
+}
+html[data-theme="dark"] .empty-state strong { color: #94a3b8 !important; }
+html[data-theme="dark"] .empty-state > i[data-lucide],
+html[data-theme="dark"] .empty-state > svg,
+html[data-theme="dark"] .empty-state > .bi { color: #20d483 !important; opacity: .6; }
+
+/* --- Alerts dark mode --- */
+html[data-theme="dark"] .alert-success { background: rgba(32,212,131,.12) !important; color: #34d399 !important; }
+html[data-theme="dark"] .alert-warning { background: rgba(245,158,11,.12) !important; color: #fbbf24 !important; }
+html[data-theme="dark"] .alert-danger  { background: rgba(248,113,113,.1)  !important; color: #f87171 !important; }
+html[data-theme="dark"] .alert-info    { background: rgba(96,165,250,.12)   !important; color: #60a5fa !important; }
+html[data-theme="dark"] .alert-primary { background: rgba(32,212,131,.12)   !important; color: #20d483 !important; }
+
+/* --- Text utilities dark mode --- */
+html[data-theme="dark"] .text-muted,
+html[data-theme="dark"] .text-secondary { color: #64748b !important; }
+html[data-theme="dark"] .text-body,
+html[data-theme="dark"] .text-dark      { color: #cbd5e1 !important; }
+
+/* --- Dropdown dark mode --- */
+html[data-theme="dark"] .dropdown-menu {
+    background: #0d1b2a !important;
+    border-color: rgba(96,165,250,.12) !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,.45) !important;
+}
+html[data-theme="dark"] .dropdown-item { color: #cbd5e1 !important; }
+html[data-theme="dark"] .dropdown-item:hover, html[data-theme="dark"] .dropdown-item:focus {
+    background: rgba(32,212,131,.08) !important;
+    color: #20d483 !important;
+}
+html[data-theme="dark"] .dropdown-divider { border-color: rgba(96,165,250,.08) !important; }
+
+/* --- Tabs / nav dark mode --- */
+html[data-theme="dark"] .nav-tabs .nav-link {
+    color: #64748b !important;
+    border-color: transparent;
+}
+html[data-theme="dark"] .nav-tabs .nav-link.active,
+html[data-theme="dark"] .nav-tabs .nav-link:hover {
+    background: transparent !important;
+    color: #20d483 !important;
+    border-bottom-color: #20d483 !important;
+}
+html[data-theme="dark"] .nav-tabs { border-bottom-color: rgba(96,165,250,.1) !important; }
+
+/* --- Tooltips dark mode --- */
+html[data-theme="dark"] .tooltip-inner {
+    background: #1e3a5f !important;
+    color: #e2e8f0 !important;
+    font-size: .75rem;
+    border-radius: 8px;
+}
+
+/* ── 14. ACTION BUTTON DARK MODE ──────────────────────────── */
+html[data-theme="dark"] .action-btn {
+    background: rgba(255,255,255,.04) !important;
+    border-color: rgba(96,165,250,.1) !important;
+    color: #64748b !important;
+}
+html[data-theme="dark"] .action-btn:hover {
+    background: rgba(32,212,131,.1) !important;
+    color: #20d483 !important;
+    border-color: rgba(32,212,131,.25) !important;
+}
+html[data-theme="dark"] .action-btn-danger {
+    background: rgba(248,113,113,.08) !important;
+    border-color: rgba(248,113,113,.2) !important;
+    color: #f87171 !important;
+}
+html[data-theme="dark"] .action-btn-danger:hover {
+    background: rgba(248,113,113,.15) !important;
+    border-color: rgba(248,113,113,.35) !important;
+}
+html[data-theme="dark"] .action-btn-warning {
+    background: rgba(245,158,11,.08) !important;
+    border-color: rgba(245,158,11,.2) !important;
+    color: #fbbf24 !important;
+}
+html[data-theme="dark"] .action-btn-success {
+    background: rgba(32,212,131,.08) !important;
+    border-color: rgba(32,212,131,.2) !important;
+    color: #20d483 !important;
+}
+
+/* ── 15. RESPONSIVE ───────────────────────────────────────── */
+@media (max-width: 767.98px) {
+    .page-header { flex-direction: column; }
+    .page-header h1 { font-size: 1.15rem; }
+    .btn-sm { padding: .35rem .75rem !important; }
+    .table > :not(caption) > * > * { padding: .5rem .6rem !important; }
+    .modal-dialog { margin: .5rem !important; }
+}
+@media (max-width: 575.98px) {
+    .page-header .d-flex.gap-2 { flex-wrap: wrap; width: 100%; }
+    .page-header .btn { flex: 1; min-width: calc(50% - .25rem); }
+}
