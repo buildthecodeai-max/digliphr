@@ -657,6 +657,12 @@ class AttendanceCalculationService
                 ];
             } else {
                 $shift = $shiftModel->findForEmployee($employeeId, $date) ?? [];
+                // If no assignment covers this historical date (e.g. the shift
+                // assignment was created after the date), fall back to the
+                // employee's current shift for display purposes only.
+                if (empty($shift) && $row && $date < $today) {
+                    $shift = $shiftModel->findForEmployee($employeeId) ?? [];
+                }
             }
 
             $leaveToday = null;

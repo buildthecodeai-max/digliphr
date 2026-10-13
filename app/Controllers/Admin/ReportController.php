@@ -424,7 +424,13 @@ class ReportController extends Controller
              LEFT JOIN departments d ON d.id = e.department_id
              LEFT JOIN branches b ON b.id = e.branch_id
              LEFT JOIN shifts s ON s.id = a.shift_id
-             LEFT JOIN shifts def_s ON def_s.id = e.shift_id AND a.shift_id IS NULL AND def_s.deleted_at IS NULL
+             LEFT JOIN (
+                 SELECT employee_id, shift_id,
+                        ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY effective_from DESC) AS rn
+                 FROM shift_assignments WHERE deleted_at IS NULL
+             ) sa_fallback ON sa_fallback.employee_id = e.id AND sa_fallback.rn = 1
+             LEFT JOIN shifts def_s ON def_s.id = COALESCE(e.shift_id, sa_fallback.shift_id)
+                 AND a.shift_id IS NULL AND def_s.deleted_at IS NULL
              WHERE (
                  (a.status IN ('late','half_day','missing_checkout') AND a.late_minutes > 0)
                  OR (
