@@ -61,8 +61,9 @@ class Employee extends Model
         $params = [];
 
         if (!empty($filters['q'])) {
-            $clauses[] = '(e.first_name LIKE :q OR e.last_name LIKE :q OR e.employee_code LIKE :q OR e.company_email LIKE :q OR e.phone LIKE :q)';
-            $params['q'] = '%' . $filters['q'] . '%';
+            $clauses[] = '(e.first_name LIKE :q1 OR e.last_name LIKE :q2 OR e.employee_code LIKE :q3 OR e.company_email LIKE :q4 OR e.phone LIKE :q5)';
+            $qv = '%' . $filters['q'] . '%';
+            $params['q1'] = $qv; $params['q2'] = $qv; $params['q3'] = $qv; $params['q4'] = $qv; $params['q5'] = $qv;
         }
         if (!empty($filters['department_id'])) {
             $clauses[] = 'e.department_id = :department_id';

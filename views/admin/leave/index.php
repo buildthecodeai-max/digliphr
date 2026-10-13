@@ -191,11 +191,15 @@ html[data-theme="dark"] .lv-bulk-count{color:#fcd34d}
 
 <!-- Filter card -->
 <div class="lv-filter-card">
-    <form method="GET" class="row g-2 align-items-end" id="lvFilterForm">
+    <form method="GET" action="/admin/leave" class="row g-2 align-items-end" id="lvFilterForm">
         <?php if (!empty($filters['company_id'])): ?>
         <input type="hidden" name="company_id" value="<?= (int)$filters['company_id'] ?>">
         <?php endif; ?>
         <div class="col-md-3">
+            <label>Employee</label>
+            <input type="text" name="q" class="form-control form-control-sm" placeholder="Name or code…" value="<?= e($filters['q'] ?? '') ?>">
+        </div>
+        <div class="col-md-2">
             <label>Leave Type</label>
             <select name="leave_type_id" class="form-select form-select-sm">
                 <option value="">All Types</option>

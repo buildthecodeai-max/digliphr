@@ -187,7 +187,7 @@ html[data-theme="dark"] .pe-empty p{color:#64748b}
 
 <!-- Filter card -->
 <div class="pe-filter-card">
-    <form method="GET" class="row g-2 align-items-end" id="peFilterForm">
+    <form method="GET" action="/admin/employees" class="row g-2 align-items-end" id="peFilterForm">
         <?php if (count($companies ?? []) > 1): ?>
         <div class="col-md-2">
             <label>Company</label>
