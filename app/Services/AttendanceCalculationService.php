@@ -334,7 +334,12 @@ class AttendanceCalculationService
              LEFT JOIN departments d ON d.id = e.department_id
              LEFT JOIN branches b ON b.id = e.branch_id
              LEFT JOIN designations dg ON dg.id = e.designation_id
-             LEFT JOIN shifts s ON s.id = e.shift_id
+             LEFT JOIN (
+                 SELECT employee_id, shift_id,
+                        ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY effective_from DESC) AS rn
+                 FROM shift_assignments WHERE deleted_at IS NULL
+             ) sa_emp ON sa_emp.employee_id = e.id AND sa_emp.rn = 1
+             LEFT JOIN shifts s ON s.id = COALESCE(e.shift_id, sa_emp.shift_id) AND s.deleted_at IS NULL
              WHERE {$employeeWhere}
              ORDER BY e.first_name ASC, e.last_name ASC",
             $params
@@ -425,7 +430,7 @@ class AttendanceCalculationService
                 SUM(CASE WHEN hol.id IS NULL AND ({$dayWeight}) = 1 AND lr.id IS NOT NULL AND lr.is_half_day = 1
                               AND lt.is_paid = 0 AND cal.d <= :today0d THEN 0.5 ELSE 0 END) AS unpaid_half_leave_adjustment,
                 SUM(CASE WHEN hol.id IS NULL AND lr.id IS NULL AND cal.d < :today1
-                    THEN ({$dayWeight}) ELSE 0 END) AS absent_days,
+                    THEN ({$dayWeight}) ELSE 0 END) AS not_checked_in_days,
                 SUM(CASE WHEN hol.id IS NULL AND lr.id IS NULL AND cal.d = :today2 AND ({$dayWeight}) > 0
                          AND (emp_shift.id IS NULL OR TIME(NOW()) >= emp_shift.start_time)
                     THEN 1 ELSE 0 END) AS pending_today_days,
@@ -443,7 +448,12 @@ class AttendanceCalculationService
             LEFT JOIN leave_requests lr ON lr.employee_id = e.id AND lr.status = 'approved'
                 AND cal.d BETWEEN lr.start_date AND lr.end_date AND lr.deleted_at IS NULL
             LEFT JOIN leave_types lt ON lt.id = lr.leave_type_id
-            LEFT JOIN shifts emp_shift ON emp_shift.id = e.shift_id AND emp_shift.deleted_at IS NULL
+            LEFT JOIN (
+                SELECT employee_id, shift_id,
+                       ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY effective_from DESC) AS rn
+                FROM shift_assignments WHERE deleted_at IS NULL
+            ) sa_gs ON sa_gs.employee_id = e.id AND sa_gs.rn = 1
+            LEFT JOIN shifts emp_shift ON emp_shift.id = COALESCE(e.shift_id, sa_gs.shift_id) AND emp_shift.deleted_at IS NULL
             WHERE e.id IN ({$idPlaceholders})
               AND a.id IS NULL
               AND cal.d >= e.joining_date
@@ -476,7 +486,7 @@ class AttendanceCalculationService
             // paid/unpaid so a mix of both in one range can't cross-cancel).
             $paidHalfAdj = (float) ($gap['paid_half_leave_adjustment'] ?? 0);
             $unpaidHalfAdj = (float) ($gap['unpaid_half_leave_adjustment'] ?? 0);
-            $absent = (float) ($rec['recorded_absent_days'] ?? 0) + (float) ($gap['absent_days'] ?? 0)
+            $absent = (float) ($rec['recorded_absent_days'] ?? 0)
                 + (float) ($rec['half_days'] ?? 0) * 0.5 + $paidHalfAdj + $unpaidHalfAdj;
             $paidLeave = max(0, (float) ($gap['paid_leave_days_raw'] ?? 0) - $paidHalfAdj)
                 + (float) ($rec['recorded_paid_leave_days'] ?? 0) + (float) ($rec['recorded_unlinked_leave_days'] ?? 0);
@@ -493,7 +503,8 @@ class AttendanceCalculationService
             $requiredMinutes = (int) ($rec['required_minutes'] ?? 0);
             $overtimeMinutes = (int) ($rec['overtime_minutes'] ?? 0);
             $undertimeMinutes = max(0, $requiredMinutes - $workedMinutes - $overtimeMinutes);
-            $missingAttendance = (int) ($rec['missing_checkout_days'] ?? 0) + (int) ($rec['missing_checkout_open'] ?? 0);
+            $missingAttendance = (int) ($rec['missing_checkout_days'] ?? 0) + (int) ($rec['missing_checkout_open'] ?? 0)
+                + (int) round((float) ($gap['not_checked_in_days'] ?? 0));
             $attendancePct = $scheduledWorkingDays > 0 ? round(($present / $scheduledWorkingDays) * 100, 1) : 0.0;
 
             $row = [
