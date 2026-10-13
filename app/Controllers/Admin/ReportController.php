@@ -383,14 +383,14 @@ class ReportController extends Controller
         $rows = $this->db()->fetchAll(
             "SELECT e.id AS employee_id, e.employee_code, CONCAT(e.first_name,' ',e.last_name) AS employee_name,
                     d.name AS department_name, b.name AS branch_name, s.name AS shift_name,
-                    a.attendance_date, s.start_time AS scheduled_in, a.check_in_at, a.late_minutes,
+                    a.attendance_date, a.status, s.start_time AS scheduled_in, a.check_in_at, a.late_minutes,
                     s.grace_minutes, GREATEST(0, a.late_minutes - COALESCE(s.grace_minutes,0)) AS effective_late_minutes
              FROM attendance a
              INNER JOIN employees e ON e.id = a.employee_id
              LEFT JOIN departments d ON d.id = e.department_id
              LEFT JOIN branches b ON b.id = e.branch_id
              LEFT JOIN shifts s ON s.id = a.shift_id
-             WHERE a.status = 'late' AND a.late_minutes > 0 AND {$where}
+             WHERE a.status IN ('late','half_day','missing_checkout') AND a.late_minutes > 0 AND {$where}
              ORDER BY a.attendance_date DESC, a.late_minutes DESC",
             $params
         );

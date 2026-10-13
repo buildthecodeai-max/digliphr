@@ -104,8 +104,12 @@ class Attendance extends Model
             $params['shift_id'] = $filters['shift_id'];
         }
         if (!empty($filters['status'])) {
-            $clauses[] = 'a.status = :status';
-            $params['status'] = $filters['status'];
+            if ($filters['status'] === 'missing_checkout') {
+                $clauses[] = "(a.status = 'missing_checkout' OR (a.check_in_at IS NOT NULL AND a.check_out_at IS NULL AND a.status NOT IN ('on_leave','holiday','weekend','absent')))";
+            } else {
+                $clauses[] = 'a.status = :status';
+                $params['status'] = $filters['status'];
+            }
         }
         if (!empty($filters['verification_status'])) {
             $clauses[] = 'a.verification_status = :verification_status';
@@ -225,6 +229,10 @@ class Attendance extends Model
                 SUM(CASE WHEN a.status = 'remote' THEN 1 ELSE 0 END) AS remote_count,
                 SUM(CASE WHEN a.status = 'half_day' THEN 1 ELSE 0 END) AS half_day_count,
                 SUM(CASE WHEN a.status = 'on_leave' THEN 1 ELSE 0 END) AS on_leave_count,
+                SUM(CASE WHEN a.status = 'missing_checkout'
+                              OR (a.check_in_at IS NOT NULL AND a.check_out_at IS NULL
+                                  AND a.status NOT IN ('on_leave','holiday','weekend','absent'))
+                    THEN 1 ELSE 0 END) AS missing_checkout_count,
                 SUM(CASE WHEN a.verification_status = 'flagged' THEN 1 ELSE 0 END) AS flagged_count,
                 COALESCE(SUM(a.work_minutes), 0) AS total_work_minutes,
                 COALESCE(SUM(a.overtime_minutes), 0) AS total_overtime_minutes,
@@ -243,6 +251,7 @@ class Attendance extends Model
             'remote_count' => 0,
             'half_day_count' => 0,
             'on_leave_count' => 0,
+            'missing_checkout_count' => 0,
             'flagged_count' => 0,
             'total_work_minutes' => 0,
             'total_overtime_minutes' => 0,

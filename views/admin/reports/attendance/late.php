@@ -28,13 +28,13 @@ $s = $late['summary'] ?? [];
     ?>
     <div class="report-table-shell">
         <table class="table table-sm mb-0 align-middle">
-            <thead><tr><th>Employee</th><th>Department</th><th>Branch</th><th>Shift</th><th>Scheduled In</th><th>Actual In</th><th>Late By</th><th>Grace</th><th>Effective Late</th></tr></thead>
+            <thead><tr><th>Employee</th><th>Department</th><th>Branch</th><th>Shift</th><th>Scheduled In</th><th>Actual In</th><th>Late By</th><th>Grace</th><th>Effective Late</th><th>Status</th></tr></thead>
             <tbody>
             <?php if (!$rows): ?>
-                <tr><td colspan="9"><div class="empty-state mb-0 py-4">No late arrivals in the selected period.</div></td></tr>
+                <tr><td colspan="10"><div class="empty-state mb-0 py-4">No late arrivals in the selected period.</div></td></tr>
             <?php else: foreach ($lateByDate as $attDate => $dateRows): ?>
                 <tr class="att-date-group-row">
-                    <td colspan="9">
+                    <td colspan="10">
                         <span class="att-date-label"><?= e(date('l, j F Y', strtotime($attDate))) ?></span>
                         <span class="att-date-count"><?= count($dateRows) ?> occurrence<?= count($dateRows) !== 1 ? 's' : '' ?></span>
                     </td>
@@ -50,6 +50,7 @@ $s = $late['summary'] ?? [];
                     <td><?= (int) $r['late_minutes'] ?>m</td>
                     <td><?= (int) $r['grace_minutes'] ?>m</td>
                     <td class="fw-semibold"><?= (int) $r['effective_late_minutes'] ?>m</td>
+                    <td><?= status_badge($r['status'] ?? 'late') ?></td>
                 </tr>
                 <?php endforeach; ?>
             <?php endforeach; endif; ?>

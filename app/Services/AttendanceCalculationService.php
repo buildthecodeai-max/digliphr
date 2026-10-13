@@ -351,9 +351,16 @@ class AttendanceCalculationService
         $recorded = $this->db->fetchAll(
             "SELECT
                 a.employee_id,
-                SUM(a.status IN ('present','manual')) AS present_days,
-                SUM(a.status = 'late') AS late_days,
-                SUM(a.status = 'half_day') AS half_days,
+                SUM(a.status IN ('present','manual')
+                    AND NOT (a.check_in_at IS NOT NULL AND a.check_out_at IS NULL
+                             AND a.attendance_date < CURDATE()
+                             AND a.status NOT IN ('on_leave','holiday','weekend','absent'))) AS present_days,
+                SUM(a.status = 'late'
+                    AND NOT (a.check_in_at IS NOT NULL AND a.check_out_at IS NULL
+                             AND a.attendance_date < CURDATE())) AS late_days,
+                SUM(a.status = 'half_day'
+                    AND NOT (a.check_in_at IS NOT NULL AND a.check_out_at IS NULL
+                             AND a.attendance_date < CURDATE())) AS half_days,
                 SUM(a.status = 'remote' OR a.is_remote = 1) AS wfh_days,
                 SUM(a.status = 'manual') AS official_duty_days,
                 SUM(a.status = 'absent') AS recorded_absent_days,
@@ -363,13 +370,16 @@ class AttendanceCalculationService
                 SUM(a.status = 'on_leave' AND lt.id IS NULL) AS recorded_unlinked_leave_days,
                 SUM(a.status = 'holiday') AS recorded_holiday_days,
                 SUM(a.status = 'weekend') AS recorded_restday_days,
-                SUM(a.status = 'missing_checkout') AS missing_checkout_days,
+                SUM(a.status = 'missing_checkout'
+                    OR (a.check_in_at IS NOT NULL AND a.check_out_at IS NULL
+                        AND a.attendance_date < CURDATE()
+                        AND a.status NOT IN ('on_leave','holiday','weekend','absent'))) AS missing_checkout_days,
                 SUM(a.early_leave_minutes > 0) AS early_departure_days,
                 COALESCE(SUM(a.work_minutes), 0) AS worked_minutes,
                 COALESCE(SUM(a.overtime_minutes), 0) AS overtime_minutes,
                 COALESCE(SUM(a.expected_work_minutes), 0) AS required_minutes,
                 COALESCE(SUM(a.late_minutes), 0) AS late_minutes_total,
-                SUM(a.check_in_at IS NOT NULL AND a.check_out_at IS NULL AND a.status NOT IN ('on_leave','holiday','weekend')) AS missing_checkout_open,
+                0 AS missing_checkout_open,
                 COUNT(*) AS recorded_days
              FROM attendance a
              LEFT JOIN leave_requests lr ON lr.id = a.leave_request_id
@@ -786,6 +796,15 @@ class AttendanceCalculationService
         if ($attendanceRow) {
             $status = (string) $attendanceRow['status'];
             $isRemote = (bool) ($attendanceRow['is_remote'] ?? false);
+            // A past-date record with check-in but no check-out is always
+            // missing_attendance regardless of the stored status value (the
+            // missing_checkouts cron may not have run yet for that date).
+            $hasCheckin  = !empty($attendanceRow['check_in_at']);
+            $hasCheckout = !empty($attendanceRow['check_out_at']);
+            if ($hasCheckin && !$hasCheckout && $date < $today
+                && !in_array($status, ['on_leave', 'holiday', 'weekend', 'absent'], true)) {
+                return ['label' => 'Missing Checkout', 'category' => 'missing_attendance', 'is_half' => false];
+            }
             return match (true) {
                 $status === 'remote' || $isRemote => ['label' => 'Work From Home', 'category' => 'work_from_home', 'is_half' => false],
                 $status === 'manual' => ['label' => 'Official Duty', 'category' => 'official_duty', 'is_half' => false],

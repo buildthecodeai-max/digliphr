@@ -95,6 +95,7 @@ $query = http_build_query(array_filter($filters));
     <div class="row g-2 mb-3">
         <div class="col"><div class="card shadow-sm"><div class="card-body py-2 text-center"><div class="small text-muted">Present</div><div class="fw-bold text-success"><?= (int) ($stats['present_count'] ?? 0) ?></div></div></div></div>
         <div class="col"><div class="card shadow-sm"><div class="card-body py-2 text-center"><div class="small text-muted">Late</div><div class="fw-bold text-warning"><?= (int) ($stats['late_count'] ?? 0) ?></div></div></div></div>
+        <div class="col"><div class="card shadow-sm"><div class="card-body py-2 text-center"><div class="small text-muted">Missing Checkout</div><div class="fw-bold text-danger"><?= (int) ($stats['missing_checkout_count'] ?? 0) ?></div></div></div></div>
         <div class="col"><div class="card shadow-sm"><div class="card-body py-2 text-center"><div class="small text-muted">Remote</div><div class="fw-bold text-info"><?= (int) ($stats['remote_count'] ?? 0) ?></div></div></div></div>
         <div class="col"><div class="card shadow-sm"><div class="card-body py-2 text-center"><div class="small text-muted">Flagged</div><div class="fw-bold text-danger"><?= (int) ($stats['flagged_count'] ?? 0) ?></div></div></div></div>
         <div class="col"><div class="card shadow-sm"><div class="card-body py-2 text-center"><div class="small text-muted">Work Hrs</div><div class="fw-bold"><?= e(format_minutes((int) ($stats['total_work_minutes'] ?? 0))) ?></div></div></div></div>
@@ -167,6 +168,7 @@ $query = http_build_query(array_filter($filters));
                         <th>Date</th>
                         <th>Employee</th>
                         <th>Department</th>
+                        <th>Shift</th>
                         <th>Check In</th>
                         <th>Check Out</th>
                         <th>Status</th>
@@ -177,7 +179,7 @@ $query = http_build_query(array_filter($filters));
                 </thead>
                 <tbody>
                 <?php if (empty($records['data'])): ?>
-                    <tr><td colspan="10" class="text-center text-muted py-4">No attendance records found.</td></tr>
+                    <tr><td colspan="11" class="text-center text-muted py-4">No attendance records found.</td></tr>
                 <?php else: ?>
                     <?php foreach ($records['data'] as $row):
                         $thumb = $thumbnails[(int) $row['id']] ?? null;
@@ -199,6 +201,7 @@ $query = http_build_query(array_filter($filters));
                             <div class="text-muted small"><?= e($row['employee_code']) ?></div>
                         </td>
                         <td><?= e($row['department_name'] ?? '—') ?></td>
+                        <td><?= e($row['shift_name'] ?? '—') ?></td>
                         <td><?= e(format_datetime($row['check_in_at'] ?? null, config('app.time_format', 'g:i A'))) ?></td>
                         <td><?= e(format_datetime($row['check_out_at'] ?? null, config('app.time_format', 'g:i A'))) ?></td>
                         <td><?= status_badge($row['status']) ?></td>
